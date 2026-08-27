@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/todo.dart';
 import '../widgets/todo_item.dart';
 
@@ -15,12 +17,42 @@ class TodoScreenState extends State<TodoScreen> {
   int? lastDeletedIndex;
   final TextEditingController controller = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    loadTodos();
+  }
+
+  void saveTodos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> titles = todos.map((todo) => todo.title).toList();
+    List<String> done = todos.map((todo) => todo.isDone.toString()).toList();
+    await prefs.setStringList('titles', titles);
+    await prefs.setStringList('done', done);
+  }
+
+  void loadTodos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? titles = prefs.getStringList('titles');
+    List<String>? done = prefs.getStringList('done');
+
+    if (titles != null && done != null) {
+      setState(() {
+        todos = List.generate(
+          titles.length,
+          (index) => Todo(title: titles[index], isDone: done[index] == 'true'),
+        );
+      });
+    }
+  }
+
   void addTodo() {
     if (controller.text.isNotEmpty) {
       setState(() {
         todos.add(Todo(title: controller.text));
         controller.clear();
       });
+      saveTodos();
     }
   }
 
@@ -56,6 +88,7 @@ class TodoScreenState extends State<TodoScreen> {
                       isDone: todos[index].isDone,
                     );
                   });
+                  saveTodos();
                   Navigator.pop(context);
                 }
               },
@@ -73,6 +106,7 @@ class TodoScreenState extends State<TodoScreen> {
       lastDeletedIndex = index;
       todos.removeAt(index);
     });
+    saveTodos();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -84,6 +118,7 @@ class TodoScreenState extends State<TodoScreen> {
               setState(() {
                 todos.insert(lastDeletedIndex!, lastDeleted!);
               });
+              saveTodos();
             }
           },
         ),
@@ -99,12 +134,14 @@ class TodoScreenState extends State<TodoScreen> {
         isDone: !todos[index].isDone,
       );
     });
+    saveTodos();
   }
 
   void clearCompleted() {
     setState(() {
       todos.removeWhere((todo) => todo.isDone);
     });
+    saveTodos();
   }
 
   @override
@@ -135,13 +172,11 @@ class TodoScreenState extends State<TodoScreen> {
                       hintText: 'Enter a task...',
                       border: OutlineInputBorder(),
                     ),
+                    onSubmitted: (_) => addTodo(),
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: addTodo,
-                  child: const Text('Add'),
-                ),
+                ElevatedButton(onPressed: addTodo, child: const Text('Add')),
               ],
             ),
           ),
