@@ -48,8 +48,6 @@ jobs:
       - run: flutter pub get
       - run: flutter clean
       - run: flutter build apk --release --split-per-abi
-      - name: List APK files
-        - run: ls -la build/app/outputs/
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "build/app/outputs/apk/releases/*.apk"
