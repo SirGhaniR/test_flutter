@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/todo.dart';
 
 class TodoItem extends StatelessWidget {
@@ -26,23 +27,62 @@ class TodoItem extends StatelessWidget {
       elevation: isDark ? 0 : 1,
       color: isDark ? Colors.grey[850] : null,
       child: ListTile(
-        title: Text(
-          todo.title,
-          style: TextStyle(
-            decoration: todo.isDone ? TextDecoration.lineThrough : TextDecoration.none,
-            color: todo.isDone
-                ? (isDark ? Colors.grey[600] : Colors.grey)
-                : (isDark ? Colors.white : Colors.black),
-          ),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 4,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Todo.getPriorityColor(todo.priority),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(
+                todo.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: todo.isDone
+                    ? Colors.green
+                    : (isDark ? Colors.grey[500] : Colors.grey),
+              ),
+              onPressed: onToggle,
+            ),
+          ],
         ),
-        leading: IconButton(
-          icon: Icon(
-            todo.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: todo.isDone
-                ? Colors.green
-                : (isDark ? Colors.grey[500] : Colors.grey),
-          ),
-          onPressed: onToggle,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                todo.title,
+                style: TextStyle(
+                  decoration: todo.isDone
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                  color: todo.isDone
+                      ? (isDark ? Colors.grey[600] : Colors.grey)
+                      : (isDark ? Colors.white : Colors.black),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Todo.getPriorityColor(todo.priority)
+                    .withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                todo.priority.name.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Todo.getPriorityColor(todo.priority),
+                ),
+              ),
+            ),
+          ],
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete, color: Colors.red),
