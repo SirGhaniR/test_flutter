@@ -50,37 +50,59 @@ class TodoItem extends StatelessWidget {
             ),
           ],
         ),
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                todo.title,
-                style: TextStyle(
-                  decoration: todo.isDone
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
-                  color: todo.isDone
-                      ? (isDark ? Colors.grey[600] : Colors.grey)
-                      : (isDark ? Colors.white : Colors.black),
-                ),
+            Text(
+              todo.title,
+              style: TextStyle(
+                decoration: todo.isDone
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+                color: todo.isDone
+                    ? (isDark ? Colors.grey[600] : Colors.grey)
+                    : (isDark ? Colors.white : Colors.black),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Todo.getPriorityColor(todo.priority)
-                    .withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                todo.priority.name.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Todo.getPriorityColor(todo.priority),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Todo.getPriorityColor(todo.priority)
+                        .withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    todo.priority.name.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Todo.getPriorityColor(todo.priority),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  'Updated ${todo.timeAgo}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '-  Created ${todo.createdDate}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -88,7 +110,7 @@ class TodoItem extends StatelessWidget {
           icon: const Icon(Icons.delete, color: Colors.red),
           onPressed: onDelete,
         ),
-        onLongPress: onEdit,
+        onTap: onEdit,
       ),
     );
   }

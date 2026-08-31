@@ -16,7 +16,7 @@ class TodoScreenState extends State<TodoScreen> {
   Todo? lastDeleted;
   int? lastDeletedIndex;
   final TextEditingController controller = TextEditingController();
-  Priority selectedPriority = Priority.medium;
+  Priority selectedPriority = Priority.low;
 
   void addTodo() {
     if (controller.text.isNotEmpty) {
@@ -69,10 +69,10 @@ class TodoScreenState extends State<TodoScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade800),
-                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.grey.shade700),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: DropdownButton<Priority>(
                     value: selectedPriority,
@@ -140,7 +140,14 @@ class TodoScreenState extends State<TodoScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: addTodo, child: const Text('Add')),
+                ElevatedButton(
+                  onPressed: addTodo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[850],
+                    foregroundColor: Colors.indigoAccent,
+                  ),
+                  child: const Text('Add'),
+                ),
               ],
             ),
           ),
@@ -253,6 +260,7 @@ class TodoScreenState extends State<TodoScreen> {
                             title: editController.text,
                             isDone: todos[index].isDone,
                             priority: currentPriority,
+                            createdAt: todos[index].createdAt,
                           );
                         });
                         saveTodos();
@@ -263,7 +271,7 @@ class TodoScreenState extends State<TodoScreen> {
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    spacing: 2,
+                    spacing: 8,
                     children: [
                       _buildPriorityButton(
                         context,
@@ -312,6 +320,7 @@ class TodoScreenState extends State<TodoScreen> {
                           title: editController.text,
                           isDone: todos[index].isDone,
                           priority: currentPriority,
+                          createdAt: todos[index].createdAt,
                         );
                       });
                       saveTodos();
@@ -339,6 +348,8 @@ class TodoScreenState extends State<TodoScreen> {
     List<String>? titles = prefs.getStringList('titles');
     List<String>? done = prefs.getStringList('done');
     List<String>? priorities = prefs.getStringList('priorities');
+    List<String>? createdAt = prefs.getStringList('createdAt');
+    List<String>? updatedAt = prefs.getStringList('updatedAt');
 
     if (titles != null && done != null) {
       setState(() {
@@ -353,6 +364,12 @@ class TodoScreenState extends State<TodoScreen> {
                     orElse: () => Priority.medium,
                   )
                 : Priority.medium,
+            createdAt: createdAt != null && createdAt.length > index
+                ? DateTime.parse(createdAt[index])
+                : null,
+            updatedAt: updatedAt != null && updatedAt.length > index
+                ? DateTime.parse(updatedAt[index])
+                : null,
           ),
         );
       });
@@ -364,10 +381,18 @@ class TodoScreenState extends State<TodoScreen> {
     List<String> titles = todos.map((todo) => todo.title).toList();
     List<String> done = todos.map((todo) => todo.isDone.toString()).toList();
     List<String> priorities = todos.map((todo) => todo.priority.name).toList();
+    List<String> createdAt = todos
+        .map((todo) => todo.createdAt.toIso8601String())
+        .toList();
+    List<String> updatedAt = todos
+        .map((todo) => todo.updatedAt.toIso8601String())
+        .toList();
 
     await prefs.setStringList('titles', titles);
     await prefs.setStringList('done', done);
     await prefs.setStringList('priorities', priorities);
+    await prefs.setStringList('createdAt', createdAt);
+    await prefs.setStringList('updatedAt', updatedAt);
   }
 
   void toggleDone(int index) {
@@ -376,6 +401,7 @@ class TodoScreenState extends State<TodoScreen> {
         title: todos[index].title,
         isDone: !todos[index].isDone,
         priority: todos[index].priority,
+        createdAt: todos[index].createdAt,
       );
     });
     saveTodos();
@@ -423,7 +449,7 @@ class TodoScreenState extends State<TodoScreen> {
             color: isSelected ? color : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
