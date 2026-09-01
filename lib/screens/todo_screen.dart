@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,7 +71,10 @@ class TodoScreenState extends State<TodoScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(4),
@@ -553,21 +557,6 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   Map<DateGroup, List<Todo>> _groupTodos() {
-    final Map<DateGroup, List<Todo>> grouped = {};
-
-    for (var group in DateGroup.values) {
-      grouped[group] = [];
-    }
-
-    for (var todo in todos) {
-      final group = Todo.getDateGroup(todo.createdAt);
-      grouped[group]!.add(todo);
-    }
-
-    for (var group in DateGroup.values) {
-      grouped[group]!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    }
-
-    return grouped;
+    return groupBy(todos, (todo) => Todo.getDateGroup(todo.createdAt));
   }
 }
