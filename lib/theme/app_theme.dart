@@ -2,38 +2,77 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData lightTheme = ThemeData.light().copyWith(
-    primaryColor: Colors.blue,
+    primaryColor: Colors.indigo,
     colorScheme: const ColorScheme.light(
-      primary: Colors.blue,
-      secondary: Colors.blueAccent,
+      primary: Colors.indigo,
+      secondary: Colors.deepPurple,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.blue,
+      backgroundColor: Colors.indigo,
       foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardTheme: const CardThemeData(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.indigo, width: 2),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     ),
   );
 
   static ThemeData darkTheme = ThemeData.dark().copyWith(
-    primaryColor: Colors.indigo,
+    primaryColor: Colors.deepPurple,
     colorScheme: const ColorScheme.dark(
-      primary: Colors.indigo,
-      secondary: Colors.indigoAccent,
+      primary: Colors.deepPurple,
+      secondary: Colors.purpleAccent,
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.indigo[800],
+      backgroundColor: Colors.grey[900],
       foregroundColor: Colors.white,
+      elevation: 0,
     ),
     scaffoldBackgroundColor: Colors.grey[900],
     cardColor: Colors.grey[850],
+    cardTheme: CardThemeData(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
     inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey[850],
       border: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[700]!),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey[700]!),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.indigoAccent),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
   );

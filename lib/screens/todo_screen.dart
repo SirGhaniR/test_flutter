@@ -70,9 +70,9 @@ class TodoScreenState extends State<TodoScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade700),
+                    border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: DropdownButton<Priority>(
@@ -161,35 +161,72 @@ class TodoScreenState extends State<TodoScreen> {
 
                 if (tasks.isEmpty) return const SizedBox.shrink();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  elevation: isDark ? 0 : 1,
+                  color: isDark ? Colors.grey[850] : Colors.white,
+                  child: Theme(
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      leading: Container(
+                        width: 4,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: _getGroupColor(group),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
-                      child: Text(
+                      title: Text(
                         Todo.getDateGroupLabel(group),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white70 : Colors.grey[700],
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
+                      subtitle: Text(
+                        '${tasks.length} task${tasks.length > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${tasks.where((t) => t.isDone).length}/${tasks.length} done',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ],
+                      ),
+                      initiallyExpanded: group == DateGroup.today,
+                      children: tasks.map((todo) {
+                        final index = todos.indexOf(todo);
+                        return TodoItem(
+                          todo: todo,
+                          index: index,
+                          onToggle: () => toggleDone(index),
+                          onDelete: () => deleteTodo(index),
+                          onEdit: () => editTask(index),
+                        );
+                      }).toList(),
                     ),
-                    ...tasks.map((todo) {
-                      final index = todos.indexOf(todo);
-                      return TodoItem(
-                        todo: todo,
-                        index: index,
-                        onToggle: () => toggleDone(index),
-                        onDelete: () => deleteTodo(index),
-                        onEdit: () => editTask(index),
-                      );
-                    }),
-                    const SizedBox(height: 8),
-                  ],
+                  ),
                 );
               },
             ),
@@ -500,6 +537,19 @@ class TodoScreenState extends State<TodoScreen> {
         ),
       ),
     );
+  }
+
+  Color _getGroupColor(DateGroup group) {
+    switch (group) {
+      case DateGroup.today:
+        return Colors.blue;
+      case DateGroup.yesterday:
+        return Colors.purple;
+      case DateGroup.thisWeek:
+        return Colors.orange;
+      case DateGroup.older:
+        return Colors.grey;
+    }
   }
 
   Map<DateGroup, List<Todo>> _groupTodos() {
