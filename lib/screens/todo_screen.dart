@@ -34,6 +34,7 @@ class TodoScreenState extends State<TodoScreen> {
 
     int doneCount = todos.where((todo) => todo.isDone).length;
     bool allDone = todos.isNotEmpty && doneCount == todos.length;
+    final groupedTodos = _groupTodos();
 
     return Scaffold(
       appBar: AppBar(
@@ -153,14 +154,42 @@ class TodoScreenState extends State<TodoScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: todos.length,
-              itemBuilder: (context, index) {
-                return TodoItem(
-                  todo: todos[index],
-                  index: index,
-                  onToggle: () => toggleDone(index),
-                  onDelete: () => deleteTodo(index),
-                  onEdit: () => editTask(index),
+              itemCount: todos.isEmpty ? 0 : groupedTodos.keys.length,
+              itemBuilder: (context, groupIndex) {
+                final group = DateGroup.values[groupIndex];
+                final tasks = groupedTodos[group]!;
+
+                if (tasks.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        Todo.getDateGroupLabel(group),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                    ...tasks.map((todo) {
+                      final index = todos.indexOf(todo);
+                      return TodoItem(
+                        todo: todo,
+                        index: index,
+                        onToggle: () => toggleDone(index),
+                        onDelete: () => deleteTodo(index),
+                        onEdit: () => editTask(index),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                  ],
                 );
               },
             ),
@@ -471,5 +500,24 @@ class TodoScreenState extends State<TodoScreen> {
         ),
       ),
     );
+  }
+
+  Map<DateGroup, List<Todo>> _groupTodos() {
+    final Map<DateGroup, List<Todo>> grouped = {};
+
+    for (var group in DateGroup.values) {
+      grouped[group] = [];
+    }
+
+    for (var todo in todos) {
+      final group = Todo.getDateGroup(todo.createdAt);
+      grouped[group]!.add(todo);
+    }
+
+    for (var group in DateGroup.values) {
+      grouped[group]!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+
+    return grouped;
   }
 }

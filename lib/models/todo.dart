@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum DateGroup { today, yesterday, thisWeek, older }
+
 enum Priority { low, medium, high }
 
 class Todo {
@@ -50,6 +52,38 @@ class Todo {
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
+  }
+
+  static DateGroup getDateGroup(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = today.subtract(const Duration(days: 7));
+
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (dateOnly.isAtSameMomentAs(today)) {
+      return DateGroup.today;
+    } else if (dateOnly.isAtSameMomentAs(yesterday)) {
+      return DateGroup.yesterday;
+    } else if (dateOnly.isAfter(weekAgo)) {
+      return DateGroup.thisWeek;
+    } else {
+      return DateGroup.older;
+    }
+  }
+
+  static String getDateGroupLabel(DateGroup group) {
+    switch (group) {
+      case DateGroup.today:
+        return 'Today';
+      case DateGroup.yesterday:
+        return 'Yesterday';
+      case DateGroup.thisWeek:
+        return 'This Week';
+      case DateGroup.older:
+        return 'Older';
+    }
   }
 
   static Color getPriorityColor(Priority priority) {
