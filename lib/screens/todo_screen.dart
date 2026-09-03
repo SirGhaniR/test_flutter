@@ -14,10 +14,13 @@ class TodoScreen extends StatefulWidget {
 
 class TodoScreenState extends State<TodoScreen> {
   List<Todo> todos = [];
+  List<Todo> filteredTodos = [];
   Todo? lastDeleted;
   int? lastDeletedIndex;
   final TextEditingController controller = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   Priority selectedPriority = Priority.low;
+  String searchQuery = '';
 
   void addTodo() {
     if (controller.text.isNotEmpty) {
@@ -26,6 +29,7 @@ class TodoScreenState extends State<TodoScreen> {
         controller.clear();
       });
       saveTodos();
+      _filterTodos();
     }
   }
 
@@ -33,8 +37,9 @@ class TodoScreenState extends State<TodoScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    int doneCount = todos.where((todo) => todo.isDone).length;
-    bool allDone = todos.isNotEmpty && doneCount == todos.length;
+    int doneCount = filteredTodos.where((todo) => todo.isDone).length;
+    bool allDone =
+        filteredTodos.isNotEmpty && doneCount == filteredTodos.length;
     final groupedTodos = _groupTodos();
 
     return Scaffold(
@@ -43,7 +48,7 @@ class TodoScreenState extends State<TodoScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.select_all),
-            onPressed: todos.isEmpty ? null : toggleSelectAll,
+            onPressed: filteredTodos.isEmpty ? null : toggleSelectAll,
             tooltip: allDone ? 'Unselect all' : 'Select all',
           ),
           IconButton(
@@ -55,8 +60,32 @@ class TodoScreenState extends State<TodoScreen> {
       ),
       body: Column(
         children: [
+          // Search Bar
           Padding(
-            padding: const EdgeInsets.all(18.0),
+            padding: const EdgeInsets.symmetric(horizontal: 18.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search tasks...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          searchController.clear();
+                        },
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          // Add Task Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
             child: Row(
               children: [
                 Expanded(
@@ -157,83 +186,111 @@ class TodoScreenState extends State<TodoScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: todos.isEmpty ? 0 : groupedTodos.keys.length,
-              itemBuilder: (context, groupIndex) {
-                final group = DateGroup.values[groupIndex];
-                final tasks = groupedTodos[group]!;
-
-                if (tasks.isEmpty) return const SizedBox.shrink();
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  elevation: isDark ? 0 : 1,
-                  color: isDark ? Colors.grey[850] : Colors.white,
-                  child: Theme(
-                    data: Theme.of(context)
-                        .copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      leading: Container(
-                        width: 4,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: _getGroupColor(group),
-                          borderRadius: BorderRadius.circular(4),
+            child: filteredTodos.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: isDark ? Colors.grey[600] : Colors.grey[400],
                         ),
-                      ),
-                      title: Text(
-                        Todo.getDateGroupLabel(group),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${tasks.length} task${tasks.length > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${tasks.where((t) => t.isDone).length}/${tasks.length} done',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.keyboard_arrow_down,
+                        const SizedBox(height: 16),
+                        Text(
+                          searchQuery.isEmpty
+                              ? 'No tasks yet! Add one above.'
+                              : 'No tasks match your search.',
+                          style: TextStyle(
+                            fontSize: 16,
                             color: isDark ? Colors.grey[400] : Colors.grey[600],
                           ),
-                        ],
-                      ),
-                      initiallyExpanded: group == DateGroup.today,
-                      children: tasks.map((todo) {
-                        final index = todos.indexOf(todo);
-                        return TodoItem(
-                          todo: todo,
-                          index: index,
-                          onToggle: () => toggleDone(index),
-                          onDelete: () => deleteTodo(index),
-                          onEdit: () => editTask(index),
-                        );
-                      }).toList(),
+                        ),
+                      ],
                     ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: groupedTodos.keys.length,
+                    itemBuilder: (context, groupIndex) {
+                      final group = DateGroup.values[groupIndex];
+                      final tasks = groupedTodos[group]!;
+
+                      if (tasks.isEmpty) return const SizedBox.shrink();
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        elevation: isDark ? 0 : 1,
+                        color: isDark ? Colors.grey[850] : Colors.white,
+                        child: Theme(
+                          data: Theme.of(context)
+                              .copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            leading: Container(
+                              width: 4,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: _getGroupColor(group),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            title: Text(
+                              Todo.getDateGroupLabel(group),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${tasks.length} task${tasks.length > 1 ? 's' : ''}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${tasks.where((t) => t.isDone).length}/${tasks.length} done',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: isDark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                ),
+                              ],
+                            ),
+                            initiallyExpanded: group == DateGroup.today,
+                            children: tasks.map((todo) {
+                              final index = todos.indexOf(todo);
+                              return TodoItem(
+                                todo: todo,
+                                index: index,
+                                onToggle: () => toggleDone(index),
+                                onDelete: () => deleteTodo(index),
+                                onEdit: () => editTask(index),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           SafeArea(
             child: Container(
@@ -271,6 +328,7 @@ class TodoScreenState extends State<TodoScreen> {
       todos.removeWhere((todo) => todo.isDone);
     });
     saveTodos();
+    _filterTodos();
   }
 
   void deleteTodo(int index) {
@@ -280,6 +338,7 @@ class TodoScreenState extends State<TodoScreen> {
       todos.removeAt(index);
     });
     saveTodos();
+    _filterTodos();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -292,12 +351,19 @@ class TodoScreenState extends State<TodoScreen> {
                 todos.insert(lastDeletedIndex!, lastDeleted!);
               });
               saveTodos();
+              _filterTodos();
             }
           },
         ),
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 
   void editTask(int index) {
@@ -334,6 +400,7 @@ class TodoScreenState extends State<TodoScreen> {
                           );
                         });
                         saveTodos();
+                        _filterTodos();
                         Navigator.pop(context);
                       }
                     },
@@ -394,6 +461,7 @@ class TodoScreenState extends State<TodoScreen> {
                         );
                       });
                       saveTodos();
+                      _filterTodos();
                       Navigator.pop(context);
                     }
                   },
@@ -411,6 +479,10 @@ class TodoScreenState extends State<TodoScreen> {
   void initState() {
     super.initState();
     loadTodos();
+    searchController.addListener(() {
+      searchQuery = searchController.text;
+      _filterTodos();
+    });
   }
 
   void loadTodos() async {
@@ -444,6 +516,7 @@ class TodoScreenState extends State<TodoScreen> {
         );
       });
     }
+    _filterTodos();
   }
 
   void saveTodos() async {
@@ -475,6 +548,7 @@ class TodoScreenState extends State<TodoScreen> {
       );
     });
     saveTodos();
+    _filterTodos();
   }
 
   void toggleSelectAll() {
@@ -485,6 +559,7 @@ class TodoScreenState extends State<TodoScreen> {
       }
     });
     saveTodos();
+    _filterTodos();
   }
 
   Widget _buildPriorityButton(
@@ -543,6 +618,21 @@ class TodoScreenState extends State<TodoScreen> {
     );
   }
 
+  void _filterTodos() {
+    setState(() {
+      if (searchQuery.isEmpty) {
+        filteredTodos = List.from(todos);
+      } else {
+        filteredTodos = todos
+            .where(
+              (todo) =>
+                  todo.title.toLowerCase().contains(searchQuery.toLowerCase()),
+            )
+            .toList();
+      }
+    });
+  }
+
   Color _getGroupColor(DateGroup group) {
     switch (group) {
       case DateGroup.today:
@@ -557,6 +647,6 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   Map<DateGroup, List<Todo>> _groupTodos() {
-    return groupBy(todos, (todo) => Todo.getDateGroup(todo.createdAt));
+    return groupBy(filteredTodos, (todo) => Todo.getDateGroup(todo.createdAt));
   }
 }
