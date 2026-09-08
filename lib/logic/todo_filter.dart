@@ -7,6 +7,7 @@ class TodoFilter {
     }
     return todos
         .where((todo) => todo.title.toLowerCase().contains(query.toLowerCase()))
+        .where((todo) => todo.description.toLowerCase().contains(query.toLowerCase()))
         .toList();
   }
 }

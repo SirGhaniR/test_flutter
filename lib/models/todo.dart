@@ -6,6 +6,7 @@ enum Priority { low, medium, high }
 
 class Todo {
   final String title;
+  final String description;
   bool isDone;
   Priority priority;
   final DateTime createdAt;
@@ -13,6 +14,7 @@ class Todo {
 
   Todo({
     required this.title,
+    required this.description,
     this.isDone = false,
     this.priority = Priority.medium,
     DateTime? createdAt,
@@ -41,12 +43,14 @@ class Todo {
 
   Todo copyWith({
     String? title,
+    String? description,
     bool? isDone,
     Priority? priority,
     DateTime? updatedAt,
   }) {
     return Todo(
       title: title ?? this.title,
+      description: description ?? this.description,
       isDone: isDone ?? this.isDone,
       priority: priority ?? this.priority,
       createdAt: createdAt,

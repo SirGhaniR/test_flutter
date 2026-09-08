@@ -6,16 +6,18 @@ class TodoStorage {
   static Future<List<Todo>> loadTodos() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? titles = prefs.getStringList('titles');
+    List<String>? descriptions = prefs.getStringList('descriptions');
     List<String>? done = prefs.getStringList('done');
     List<String>? priorities = prefs.getStringList('priorities');
     List<String>? createdAt = prefs.getStringList('createdAt');
     List<String>? updatedAt = prefs.getStringList('updatedAt');
 
-    if (titles != null && done != null) {
+    if (titles != null && descriptions != null && done != null) {
       return List.generate(
         titles.length,
         (index) => Todo(
           title: titles[index],
+          description: descriptions[index],
           isDone: done[index] == 'true',
           priority: priorities != null && priorities.length > index
               ? Priority.values.firstWhere(
@@ -38,6 +40,7 @@ class TodoStorage {
   static Future<void> saveTodos(List<Todo> todos) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> titles = todos.map((todo) => todo.title).toList();
+    List<String> descriptions = todos.map((todo) => todo.description).toList();
     List<String> done = todos.map((todo) => todo.isDone.toString()).toList();
     List<String> priorities = todos.map((todo) => todo.priority.name).toList();
     List<String> createdAt = todos
@@ -48,6 +51,7 @@ class TodoStorage {
         .toList();
 
     await prefs.setStringList('titles', titles);
+    await prefs.setStringList('descriptions', descriptions);
     await prefs.setStringList('done', done);
     await prefs.setStringList('priorities', priorities);
     await prefs.setStringList('createdAt', createdAt);

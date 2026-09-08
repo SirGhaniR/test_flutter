@@ -4,7 +4,7 @@ import '../models/todo.dart';
 
 class EditTodoDialog extends StatefulWidget {
   final Todo todo;
-  final Function(String, Priority) onSave;
+  final Function(String, String, Priority) onSave;
 
   const EditTodoDialog({super.key, required this.todo, required this.onSave});
 
@@ -13,7 +13,8 @@ class EditTodoDialog extends StatefulWidget {
 }
 
 class _EditTodoDialogState extends State<EditTodoDialog> {
-  late TextEditingController editController;
+  late TextEditingController titleController;
+  late TextEditingController descriptionController;
   late Priority currentPriority;
 
   @override
@@ -24,18 +25,26 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
-            controller: editController,
+            controller: titleController,
             autofocus: true,
             decoration: const InputDecoration(
               hintText: 'Enter new task name...',
               border: OutlineInputBorder(),
+              labelText: 'Title',
             ),
-            onSubmitted: (_) {
-              if (editController.text.isNotEmpty) {
-                widget.onSave(editController.text, currentPriority);
-                Navigator.pop(context);
-              }
-            },
+            onSubmitted: (_) => _saveTodo(),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: descriptionController,
+            decoration: const InputDecoration(
+              hintText: 'Enter description...',
+              border: OutlineInputBorder(),
+              labelText: 'Description',
+            ),
+            maxLines: 4,
+            minLines: 2,
+            onSubmitted: (_) => _saveTodo(),
           ),
           const SizedBox(height: 16),
           Row(
@@ -54,29 +63,25 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: () {
-            if (editController.text.isNotEmpty) {
-              widget.onSave(editController.text, currentPriority);
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('Save'),
-        ),
+        ElevatedButton(onPressed: _saveTodo, child: const Text('Save')),
       ],
     );
   }
 
   @override
   void dispose() {
-    editController.dispose();
+    titleController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    editController = TextEditingController(text: widget.todo.title);
+    titleController = TextEditingController(text: widget.todo.title);
+    descriptionController = TextEditingController(
+      text: widget.todo.description,
+    );
     currentPriority = widget.todo.priority;
   }
 
@@ -133,5 +138,16 @@ class _EditTodoDialogState extends State<EditTodoDialog> {
         ),
       ),
     );
+  }
+
+  void _saveTodo() {
+    if (titleController.text.isNotEmpty) {
+      widget.onSave(
+        titleController.text,
+        descriptionController.text,
+        currentPriority,
+      );
+      Navigator.pop(context);
+    }
   }
 }

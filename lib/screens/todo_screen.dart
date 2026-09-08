@@ -22,16 +22,26 @@ class TodoScreenState extends State<TodoScreen> {
   List<Todo> filteredTodos = [];
   Todo? lastDeleted;
   int? lastDeletedIndex;
-  final TextEditingController controller = TextEditingController();
+
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
+
   Priority selectedPriority = Priority.low;
   String searchQuery = '';
 
   void addTodo() {
-    if (controller.text.isNotEmpty) {
+    if (titleController.text.isNotEmpty) {
       setState(() {
-        todos.add(Todo(title: controller.text, priority: selectedPriority));
-        controller.clear();
+        todos.add(
+          Todo(
+            title: titleController.text,
+            description: descriptionController.text,
+            priority: selectedPriority,
+          ),
+        );
+        titleController.clear();
+        descriptionController.clear();
       });
       _saveTodos();
       _filterTodos();
@@ -73,7 +83,8 @@ class TodoScreenState extends State<TodoScreen> {
             },
           ),
           AddTodoInput(
-            controller: controller,
+            titleController: titleController,
+            descriptionController: descriptionController,
             selectedPriority: selectedPriority,
             onPriorityChanged: (newPriority) {
               if (newPriority != null) {
@@ -175,6 +186,8 @@ class TodoScreenState extends State<TodoScreen> {
 
   @override
   void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -185,10 +198,11 @@ class TodoScreenState extends State<TodoScreen> {
       context: context,
       builder: (context) => EditTodoDialog(
         todo: todo,
-        onSave: (newTitle, newPriority) {
+        onSave: (String newTitle, String newDescription, Priority newPriority) {
           setState(() {
             todos[index] = Todo(
               title: newTitle,
+              description: newDescription,
               isDone: todos[index].isDone,
               priority: newPriority,
               createdAt: todos[index].createdAt,
@@ -218,6 +232,7 @@ class TodoScreenState extends State<TodoScreen> {
     setState(() {
       todos[index] = Todo(
         title: todos[index].title,
+        description: todos[index].description,
         isDone: !todos[index].isDone,
         priority: todos[index].priority,
         createdAt: todos[index].createdAt,
