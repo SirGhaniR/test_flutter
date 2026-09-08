@@ -1,9 +1,14 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../dialogs/edit_todo_dialog.dart';
+import '../logic/todo_filter.dart';
+import '../logic/todo_grouping.dart';
 import '../models/todo.dart';
-import '../widgets/todo_item.dart';
+import '../services/todo_storage.dart';
+import '../widgets/add_todo_input.dart';
+import '../widgets/search_input.dart';
+import '../widgets/todo_group.dart';
+import '../widgets/todo_stats.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -28,7 +33,7 @@ class TodoScreenState extends State<TodoScreen> {
         todos.add(Todo(title: controller.text, priority: selectedPriority));
         controller.clear();
       });
-      saveTodos();
+      _saveTodos();
       _filterTodos();
     }
   }
@@ -36,11 +41,11 @@ class TodoScreenState extends State<TodoScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final groupedTodos = TodoGrouper.groupTodos(filteredTodos);
 
     int doneCount = filteredTodos.where((todo) => todo.isDone).length;
     bool allDone =
         filteredTodos.isNotEmpty && doneCount == filteredTodos.length;
-    final groupedTodos = _groupTodos();
 
     return Scaffold(
       appBar: AppBar(
@@ -60,130 +65,24 @@ class TodoScreenState extends State<TodoScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: 'Search tasks...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          searchController.clear();
-                        },
-                      )
-                    : null,
-              ),
-            ),
+          SearchInput(
+            controller: searchController,
+            query: searchQuery,
+            onClear: () {
+              searchController.clear();
+            },
           ),
-          // Add Task Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter a task...',
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: (_) => addTodo(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: DropdownButton<Priority>(
-                    value: selectedPriority,
-                    underline: const SizedBox(),
-                    items: [
-                      DropdownMenuItem(
-                        value: Priority.low,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text('Low'),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: Priority.medium,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text('Medium'),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: Priority.high,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text('High'),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (Priority? newPriority) {
-                      if (newPriority != null) {
-                        setState(() {
-                          selectedPriority = newPriority;
-                        });
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: addTodo,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[850],
-                    foregroundColor: Colors.indigoAccent,
-                  ),
-                  child: const Text('Add'),
-                ),
-              ],
-            ),
+          AddTodoInput(
+            controller: controller,
+            selectedPriority: selectedPriority,
+            onPriorityChanged: (newPriority) {
+              if (newPriority != null) {
+                setState(() {
+                  selectedPriority = newPriority;
+                });
+              }
+            },
+            onAdd: addTodo,
           ),
           Expanded(
             child: filteredTodos.isEmpty
@@ -211,112 +110,25 @@ class TodoScreenState extends State<TodoScreen> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(8.0),
-                    itemCount: groupedTodos.keys.length,
+                    itemCount: DateGroup.values.length,
                     itemBuilder: (context, groupIndex) {
                       final group = DateGroup.values[groupIndex];
-                      final tasks = groupedTodos[group]!;
-
-                      if (tasks.isEmpty) return const SizedBox.shrink();
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        elevation: isDark ? 0 : 1,
-                        color: isDark ? Colors.grey[850] : Colors.white,
-                        child: Theme(
-                          data: Theme.of(context)
-                              .copyWith(dividerColor: Colors.transparent),
-                          child: ExpansionTile(
-                            leading: Container(
-                              width: 4,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: _getGroupColor(group),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            title: Text(
-                              Todo.getDateGroupLabel(group),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${tasks.length} task${tasks.length > 1 ? 's' : ''}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${tasks.where((t) => t.isDone).length}/${tasks.length} done',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: isDark
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                              ],
-                            ),
-                            initiallyExpanded: group == DateGroup.today,
-                            children: tasks.map((todo) {
-                              final index = todos.indexOf(todo);
-                              return TodoItem(
-                                todo: todo,
-                                index: index,
-                                onToggle: () => toggleDone(index),
-                                onDelete: () => deleteTodo(index),
-                                onEdit: () => editTask(index),
-                              );
-                            }).toList(),
-                          ),
-                        ),
+                      final tasks = groupedTodos[group] ?? [];
+                      return TodoGroup(
+                        group: group,
+                        tasks: tasks,
+                        isDark: isDark,
+                        onToggle: toggleDone,
+                        onDelete: deleteTodo,
+                        onEdit: editTodo,
                       );
                     },
                   ),
           ),
-          SafeArea(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              color: isDark ? Colors.grey[850] : Colors.grey[200],
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Total: ${todos.length} tasks',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isDark ? Colors.white70 : null,
-                    ),
-                  ),
-                  Text(
-                    'Left: ${todos.where((todo) => !todo.isDone).length}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.indigoAccent : Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          TodoStats(
+            total: todos.length,
+            left: todos.where((todo) => !todo.isDone).length,
+            isDark: isDark,
           ),
         ],
       ),
@@ -327,17 +139,18 @@ class TodoScreenState extends State<TodoScreen> {
     setState(() {
       todos.removeWhere((todo) => todo.isDone);
     });
-    saveTodos();
+    _saveTodos();
     _filterTodos();
   }
 
-  void deleteTodo(int index) {
+  void deleteTodo(Todo todo) {
+    final index = todos.indexOf(todo);
     setState(() {
       lastDeleted = todos[index];
       lastDeletedIndex = index;
       todos.removeAt(index);
     });
-    saveTodos();
+    _saveTodos();
     _filterTodos();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -350,7 +163,7 @@ class TodoScreenState extends State<TodoScreen> {
               setState(() {
                 todos.insert(lastDeletedIndex!, lastDeleted!);
               });
-              saveTodos();
+              _saveTodos();
               _filterTodos();
             }
           },
@@ -366,179 +179,42 @@ class TodoScreenState extends State<TodoScreen> {
     super.dispose();
   }
 
-  void editTask(int index) {
-    TextEditingController editController = TextEditingController(
-      text: todos[index].title,
-    );
-    Priority currentPriority = todos[index].priority;
-
+  void editTodo(Todo todo) {
+    final index = todos.indexOf(todo);
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Edit Task'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: editController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter new task name...',
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: (_) {
-                      if (editController.text.isNotEmpty) {
-                        setState(() {
-                          todos[index] = Todo(
-                            title: editController.text,
-                            isDone: todos[index].isDone,
-                            priority: currentPriority,
-                            createdAt: todos[index].createdAt,
-                          );
-                        });
-                        saveTodos();
-                        _filterTodos();
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    spacing: 8,
-                    children: [
-                      _buildPriorityButton(
-                        context,
-                        Priority.low,
-                        currentPriority,
-                        (priority) {
-                          setStateDialog(() {
-                            currentPriority = priority;
-                          });
-                        },
-                      ),
-                      _buildPriorityButton(
-                        context,
-                        Priority.medium,
-                        currentPriority,
-                        (priority) {
-                          setStateDialog(() {
-                            currentPriority = priority;
-                          });
-                        },
-                      ),
-                      _buildPriorityButton(
-                        context,
-                        Priority.high,
-                        currentPriority,
-                        (priority) {
-                          setStateDialog(() {
-                            currentPriority = priority;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (editController.text.isNotEmpty) {
-                      setState(() {
-                        todos[index] = Todo(
-                          title: editController.text,
-                          isDone: todos[index].isDone,
-                          priority: currentPriority,
-                          createdAt: todos[index].createdAt,
-                        );
-                      });
-                      saveTodos();
-                      _filterTodos();
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
+      builder: (context) => EditTodoDialog(
+        todo: todo,
+        onSave: (newTitle, newPriority) {
+          setState(() {
+            todos[index] = Todo(
+              title: newTitle,
+              isDone: todos[index].isDone,
+              priority: newPriority,
+              createdAt: todos[index].createdAt,
             );
-          },
-        );
-      },
+          });
+          _saveTodos();
+          _filterTodos();
+        },
+      ),
     );
   }
 
   @override
   void initState() {
     super.initState();
-    loadTodos();
+    _loadTodos();
     searchController.addListener(() {
-      searchQuery = searchController.text;
-      _filterTodos();
+      setState(() {
+        searchQuery = searchController.text;
+        _filterTodos();
+      });
     });
   }
 
-  void loadTodos() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? titles = prefs.getStringList('titles');
-    List<String>? done = prefs.getStringList('done');
-    List<String>? priorities = prefs.getStringList('priorities');
-    List<String>? createdAt = prefs.getStringList('createdAt');
-    List<String>? updatedAt = prefs.getStringList('updatedAt');
-
-    if (titles != null && done != null) {
-      setState(() {
-        todos = List.generate(
-          titles.length,
-          (index) => Todo(
-            title: titles[index],
-            isDone: done[index] == 'true',
-            priority: priorities != null && priorities.length > index
-                ? Priority.values.firstWhere(
-                    (p) => p.name == priorities[index],
-                    orElse: () => Priority.medium,
-                  )
-                : Priority.medium,
-            createdAt: createdAt != null && createdAt.length > index
-                ? DateTime.parse(createdAt[index])
-                : null,
-            updatedAt: updatedAt != null && updatedAt.length > index
-                ? DateTime.parse(updatedAt[index])
-                : null,
-          ),
-        );
-      });
-    }
-    _filterTodos();
-  }
-
-  void saveTodos() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> titles = todos.map((todo) => todo.title).toList();
-    List<String> done = todos.map((todo) => todo.isDone.toString()).toList();
-    List<String> priorities = todos.map((todo) => todo.priority.name).toList();
-    List<String> createdAt = todos
-        .map((todo) => todo.createdAt.toIso8601String())
-        .toList();
-    List<String> updatedAt = todos
-        .map((todo) => todo.updatedAt.toIso8601String())
-        .toList();
-
-    await prefs.setStringList('titles', titles);
-    await prefs.setStringList('done', done);
-    await prefs.setStringList('priorities', priorities);
-    await prefs.setStringList('createdAt', createdAt);
-    await prefs.setStringList('updatedAt', updatedAt);
-  }
-
-  void toggleDone(int index) {
+  void toggleDone(Todo todo) {
+    final index = todos.indexOf(todo);
     setState(() {
       todos[index] = Todo(
         title: todos[index].title,
@@ -547,7 +223,7 @@ class TodoScreenState extends State<TodoScreen> {
         createdAt: todos[index].createdAt,
       );
     });
-    saveTodos();
+    _saveTodos();
     _filterTodos();
   }
 
@@ -558,95 +234,25 @@ class TodoScreenState extends State<TodoScreen> {
         todo.isDone = !allDone;
       }
     });
-    saveTodos();
+    _saveTodos();
     _filterTodos();
-  }
-
-  Widget _buildPriorityButton(
-    BuildContext context,
-    Priority priority,
-    Priority currentPriority,
-    Function(Priority) onSelected,
-  ) {
-    bool isSelected = currentPriority == priority;
-    Color color = Todo.getPriorityColor(priority);
-    String label;
-
-    switch (priority) {
-      case Priority.low:
-        label = 'Low';
-        break;
-      case Priority.medium:
-        label = 'Medium';
-        break;
-      case Priority.high:
-        label = 'High';
-        break;
-    }
-
-    return GestureDetector(
-      onTap: () => onSelected(priority),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? color : Colors.grey,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _filterTodos() {
     setState(() {
-      if (searchQuery.isEmpty) {
-        filteredTodos = List.from(todos);
-      } else {
-        filteredTodos = todos
-            .where(
-              (todo) =>
-                  todo.title.toLowerCase().contains(searchQuery.toLowerCase()),
-            )
-            .toList();
-      }
+      filteredTodos = TodoFilter.filterTodos(todos, searchQuery);
     });
   }
 
-  Color _getGroupColor(DateGroup group) {
-    switch (group) {
-      case DateGroup.today:
-        return Colors.blue;
-      case DateGroup.yesterday:
-        return Colors.purple;
-      case DateGroup.thisWeek:
-        return Colors.orange;
-      case DateGroup.older:
-        return Colors.grey;
-    }
+  void _loadTodos() async {
+    final loadedTodos = await TodoStorage.loadTodos();
+    setState(() {
+      todos = loadedTodos;
+      _filterTodos();
+    });
   }
 
-  Map<DateGroup, List<Todo>> _groupTodos() {
-    return groupBy(filteredTodos, (todo) => Todo.getDateGroup(todo.createdAt));
+  void _saveTodos() {
+    TodoStorage.saveTodos(todos);
   }
 }
