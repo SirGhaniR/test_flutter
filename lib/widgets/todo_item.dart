@@ -120,7 +120,7 @@ class TodoItem extends StatelessWidget {
                       Icon(
                         Icons.description_outlined,
                         size: 16,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -128,10 +128,10 @@ class TodoItem extends StatelessWidget {
                           todo.description,
                           style: TextStyle(
                             color: todo.isDone
-                                ? (isDark ? Colors.grey[500] : Colors.grey[400])
+                                ? (isDark ? Colors.grey.shade500 : Colors.grey.shade400)
                                 : (isDark
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700]),
+                                      ? Colors.grey.shade300
+                                      : Colors.grey.shade700),
                             fontSize: 14,
                             height: 1.4,
                           ),
@@ -146,28 +146,28 @@ class TodoItem extends StatelessWidget {
                     Icon(
                       Icons.access_time,
                       size: 14,
-                      color: isDark ? Colors.grey[500] : Colors.grey[500],
+                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Updated ${todo.timeAgo}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Icon(
                       Icons.calendar_today,
                       size: 14,
-                      color: isDark ? Colors.grey[500] : Colors.grey[500],
+                      color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Created ${todo.createdDate}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                       ),
                     ),
                     const Spacer(),

@@ -7,6 +7,7 @@ import '../models/todo.dart';
 import '../services/todo_storage.dart';
 import '../widgets/add_todo_input.dart';
 import '../widgets/search_input.dart';
+import '../widgets/sort_dropdown.dart';
 import '../widgets/todo_group.dart';
 import '../widgets/todo_stats.dart';
 
@@ -29,6 +30,7 @@ class TodoScreenState extends State<TodoScreen> {
 
   Priority selectedPriority = Priority.low;
   String searchQuery = '';
+  SortOption currentSort = SortOption.newest;
 
   void addTodo() {
     if (titleController.text.isNotEmpty) {
@@ -44,7 +46,7 @@ class TodoScreenState extends State<TodoScreen> {
         descriptionController.clear();
       });
       _saveTodos();
-      _filterTodos();
+      _filterAndSortTodos();
     }
   }
 
@@ -73,75 +75,98 @@ class TodoScreenState extends State<TodoScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          SearchInput(
-            controller: searchController,
-            query: searchQuery,
-            onClear: () {
-              searchController.clear();
-            },
-          ),
-          AddTodoInput(
-            titleController: titleController,
-            descriptionController: descriptionController,
-            selectedPriority: selectedPriority,
-            onPriorityChanged: (newPriority) {
-              if (newPriority != null) {
-                setState(() {
-                  selectedPriority = newPriority;
-                });
-              }
-            },
-            onAdd: addTodo,
-          ),
-          Expanded(
-            child: filteredTodos.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: isDark ? Colors.grey[600] : Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          searchQuery.isEmpty
-                              ? 'No tasks yet! Add one above.'
-                              : 'No tasks match your search.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: DateGroup.values.length,
-                    itemBuilder: (context, groupIndex) {
-                      final group = DateGroup.values[groupIndex];
-                      final tasks = groupedTodos[group] ?? [];
-                      return TodoGroup(
-                        group: group,
-                        tasks: tasks,
-                        isDark: isDark,
-                        onToggle: toggleDone,
-                        onDelete: deleteTodo,
-                        onEdit: editTodo,
-                      );
+      body: Container(
+        margin: EdgeInsetsGeometry.symmetric(horizontal: 14, vertical: 20),
+        child: Column(
+          spacing: 8,
+          children: [
+            Row(
+              spacing: 8,
+              children: [
+                Expanded(
+                  child: SearchInput(
+                    controller: searchController,
+                    query: searchQuery,
+                    onClear: () {
+                      searchController.clear();
                     },
                   ),
-          ),
-          TodoStats(
-            total: todos.length,
-            left: todos.where((todo) => !todo.isDone).length,
-            isDark: isDark,
-          ),
-        ],
+                ),
+                SortDropdown(
+                  currentSort: currentSort,
+                  onSortChanged: (sortOption) {
+                    setState(() {
+                      currentSort = sortOption;
+                      _filterAndSortTodos();
+                    });
+                  },
+                ),
+              ],
+            ),
+            AddTodoInput(
+              titleController: titleController,
+              descriptionController: descriptionController,
+              selectedPriority: selectedPriority,
+              onPriorityChanged: (newPriority) {
+                if (newPriority != null) {
+                  setState(() {
+                    selectedPriority = newPriority;
+                  });
+                }
+              },
+              onAdd: addTodo,
+            ),
+            Expanded(
+              child: filteredTodos.isEmpty
+                  ? Center(
+                      child: Column(
+                        spacing: 16,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: isDark
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade400,
+                          ),
+                          Text(
+                            searchQuery.isEmpty
+                                ? 'No tasks yet! Add one above.'
+                                : 'No tasks match your search.',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: DateGroup.values.length,
+                      itemBuilder: (context, groupIndex) {
+                        final group = DateGroup.values[groupIndex];
+                        final tasks = groupedTodos[group] ?? [];
+                        return TodoGroup(
+                          group: group,
+                          tasks: tasks,
+                          isDark: isDark,
+                          onToggle: toggleDone,
+                          onDelete: deleteTodo,
+                          onEdit: editTodo,
+                        );
+                      },
+                    ),
+            ),
+            TodoStats(
+              total: todos.length,
+              left: todos.where((todo) => !todo.isDone).length,
+              isDark: isDark,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -151,7 +176,7 @@ class TodoScreenState extends State<TodoScreen> {
       todos.removeWhere((todo) => todo.isDone);
     });
     _saveTodos();
-    _filterTodos();
+    _filterAndSortTodos();
   }
 
   void deleteTodo(Todo todo) {
@@ -162,7 +187,7 @@ class TodoScreenState extends State<TodoScreen> {
       todos.removeAt(index);
     });
     _saveTodos();
-    _filterTodos();
+    _filterAndSortTodos();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -175,7 +200,7 @@ class TodoScreenState extends State<TodoScreen> {
                 todos.insert(lastDeletedIndex!, lastDeleted!);
               });
               _saveTodos();
-              _filterTodos();
+              _filterAndSortTodos();
             }
           },
         ),
@@ -209,7 +234,7 @@ class TodoScreenState extends State<TodoScreen> {
             );
           });
           _saveTodos();
-          _filterTodos();
+          _filterAndSortTodos();
         },
       ),
     );
@@ -222,7 +247,7 @@ class TodoScreenState extends State<TodoScreen> {
     searchController.addListener(() {
       setState(() {
         searchQuery = searchController.text;
-        _filterTodos();
+        _filterAndSortTodos();
       });
     });
   }
@@ -239,7 +264,7 @@ class TodoScreenState extends State<TodoScreen> {
       );
     });
     _saveTodos();
-    _filterTodos();
+    _filterAndSortTodos();
   }
 
   void toggleSelectAll() {
@@ -250,12 +275,13 @@ class TodoScreenState extends State<TodoScreen> {
       }
     });
     _saveTodos();
-    _filterTodos();
+    _filterAndSortTodos();
   }
 
-  void _filterTodos() {
+  void _filterAndSortTodos() {
     setState(() {
-      filteredTodos = TodoFilter.filterTodos(todos, searchQuery);
+      List<Todo> filtered = TodoFilter.filterTodos(todos, searchQuery);
+      filteredTodos = _sortTodos(filtered);
     });
   }
 
@@ -263,11 +289,37 @@ class TodoScreenState extends State<TodoScreen> {
     final loadedTodos = await TodoStorage.loadTodos();
     setState(() {
       todos = loadedTodos;
-      _filterTodos();
+      _filterAndSortTodos();
     });
   }
 
   void _saveTodos() {
     TodoStorage.saveTodos(todos);
+  }
+
+  List<Todo> _sortTodos(List<Todo> todosToSort) {
+    List<Todo> sorted = List.from(todosToSort);
+
+    switch (currentSort) {
+      case SortOption.newest:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case SortOption.oldest:
+        sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case SortOption.priorityHigh:
+        sorted.sort((a, b) => b.priority.index.compareTo(a.priority.index));
+        break;
+      case SortOption.priorityLow:
+        sorted.sort((a, b) => a.priority.index.compareTo(b.priority.index));
+        break;
+      case SortOption.alphabetical:
+        sorted.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
+        break;
+    }
+
+    return sorted;
   }
 }

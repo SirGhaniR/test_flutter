@@ -27,7 +27,7 @@ class TodoGroup extends StatelessWidget {
     if (tasks.isEmpty) return const SizedBox.shrink();
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: isDark ? 0 : 1,
       color: isDark ? Colors.grey[850] : Colors.white,
       child: Theme(
@@ -53,23 +53,23 @@ class TodoGroup extends StatelessWidget {
             '${tasks.length} task${tasks.length > 1 ? 's' : ''}',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
             ),
           ),
           trailing: Row(
+            spacing: 8,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 '${tasks.where((t) => t.isDone).length}/${tasks.length} done',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
               ),
-              const SizedBox(width: 8),
               Icon(
                 Icons.keyboard_arrow_down,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
             ],
           ),

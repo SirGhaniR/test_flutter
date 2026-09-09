@@ -20,125 +20,122 @@ class AddTodoInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter a task title...',
-                    border: OutlineInputBorder(),
+    return Column(
+      spacing: 8,
+      children: [
+        Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  hintText: 'Enter a task title...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
                   ),
-                  onSubmitted: (_) => onAdd(),
                 ),
+                onSubmitted: (_) => onAdd(),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 1,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: DropdownButton<Priority>(
-                  value: selectedPriority,
-                  underline: const SizedBox(),
-                  items: [
-                    DropdownMenuItem(
-                      value: Priority.low,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text('Low'),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: Priority.medium,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Colors.orange,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text('Medium'),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: Priority.high,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text('High'),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onChanged: onPriorityChanged,
-                ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(4),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: onAdd,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[850],
-                  foregroundColor: Colors.indigoAccent,
-                ),
-                child: const Text('Add'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter a description...',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+              child: DropdownButton<Priority>(
+                value: selectedPriority,
+                underline: const SizedBox(),
+                items: [
+                  DropdownMenuItem(
+                    value: Priority.low,
+                    child: Row(
+                      spacing: 6,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const Text('Low'),
+                      ],
                     ),
                   ),
-                  maxLines: 6,
-                  minLines: 1,
-                  onSubmitted: (_) => onAdd(),
-                ),
+                  DropdownMenuItem(
+                    value: Priority.medium,
+                    child: Row(
+                      spacing: 6,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const Text('Medium'),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: Priority.high,
+                    child: Row(
+                      spacing: 6,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const Text('High'),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: onPriorityChanged,
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+            ElevatedButton(
+              onPressed: onAdd,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[850],
+                foregroundColor: Colors.indigoAccent,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  hintText: 'Enter a description...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+                maxLines: 6,
+                minLines: 1,
+                onSubmitted: (_) => onAdd(),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

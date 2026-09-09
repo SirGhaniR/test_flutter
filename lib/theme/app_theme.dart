@@ -47,11 +47,11 @@ class AppTheme {
       secondary: Colors.purpleAccent,
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: Colors.grey.shade900,
       foregroundColor: Colors.white,
       elevation: 0,
     ),
-    scaffoldBackgroundColor: Colors.grey[900],
+    scaffoldBackgroundColor: Colors.grey.shade900,
     cardColor: Colors.grey[850],
     cardTheme: CardThemeData(
       elevation: 0,
