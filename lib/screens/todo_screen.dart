@@ -6,7 +6,9 @@ import '../logic/todo_grouping.dart';
 import '../models/todo.dart';
 import '../services/todo_storage.dart';
 import '../widgets/add_todo_input.dart';
+import '../widgets/export_bottom_sheet.dart';
 import '../widgets/search_input.dart';
+import '../widgets/selection_action_bar.dart';
 import '../widgets/sort_dropdown.dart';
 import '../widgets/todo_group.dart';
 import '../widgets/todo_stats.dart';
@@ -31,6 +33,9 @@ class TodoScreenState extends State<TodoScreen> {
   Priority selectedPriority = Priority.low;
   String searchQuery = '';
   SortOption currentSort = SortOption.newest;
+
+  final Set<Todo> selectedTodos = {};
+  bool isSelectionMode = false;
 
   void addTodo() {
     if (titleController.text.isNotEmpty) {
@@ -60,62 +65,56 @@ class TodoScreenState extends State<TodoScreen> {
         filteredTodos.isNotEmpty && doneCount == filteredTodos.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Todo List For The Great SirGhani'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.select_all),
-            onPressed: filteredTodos.isEmpty ? null : toggleSelectAll,
-            tooltip: allDone ? 'Unselect all' : 'Select all',
-          ),
-          IconButton(
-            icon: const Icon(Icons.cleaning_services),
-            onPressed: clearCompleted,
-            tooltip: 'Clear completed tasks',
-          ),
-        ],
-      ),
+      appBar: isSelectionMode
+          ? _buildSelectionAppBar()
+          : _buildNormalAppBar(allDone),
       body: Container(
-        margin: EdgeInsetsGeometry.symmetric(horizontal: 14, vertical: 20),
+        margin: const EdgeInsetsGeometry.only(top: 20),
         child: Column(
           spacing: 8,
           children: [
-            Row(
-              spacing: 8,
-              children: [
-                Expanded(
-                  child: SearchInput(
-                    controller: searchController,
-                    query: searchQuery,
-                    onClear: () {
-                      searchController.clear();
-                    },
-                  ),
+            if (!isSelectionMode) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  spacing: 8,
+                  children: [
+                    Expanded(
+                      child: SearchInput(
+                        controller: searchController,
+                        query: searchQuery,
+                        onClear: () {
+                          searchController.clear();
+                        },
+                      ),
+                    ),
+                    SortDropdown(
+                      currentSort: currentSort,
+                      onSortChanged: (sortOption) {
+                        setState(() {
+                          currentSort = sortOption;
+                          _filterAndSortTodos();
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                SortDropdown(
-                  currentSort: currentSort,
-                  onSortChanged: (sortOption) {
+              ),
+              AddTodoInput(
+                titleController: titleController,
+                descriptionController: descriptionController,
+                selectedPriority: selectedPriority,
+                onPriorityChanged: (newPriority) {
+                  if (newPriority != null) {
                     setState(() {
-                      currentSort = sortOption;
-                      _filterAndSortTodos();
+                      selectedPriority = newPriority;
                     });
-                  },
-                ),
-              ],
-            ),
-            AddTodoInput(
-              titleController: titleController,
-              descriptionController: descriptionController,
-              selectedPriority: selectedPriority,
-              onPriorityChanged: (newPriority) {
-                if (newPriority != null) {
-                  setState(() {
-                    selectedPriority = newPriority;
-                  });
-                }
-              },
-              onAdd: addTodo,
-            ),
+                  }
+                },
+                onAdd: addTodo,
+              ),
+            ],
+
             Expanded(
               child: filteredTodos.isEmpty
                   ? Center(
@@ -156,19 +155,76 @@ class TodoScreenState extends State<TodoScreen> {
                           onToggle: toggleDone,
                           onDelete: deleteTodo,
                           onEdit: editTodo,
+                          onLongPress: enterSelectionMode,
+                          selectedTodos: selectedTodos,
+                          isSelectionMode: isSelectionMode,
+                          onSelectionToggle: toggleSelection,
                         );
                       },
                     ),
             ),
-            TodoStats(
-              total: todos.length,
-              left: todos.where((todo) => !todo.isDone).length,
-              isDark: isDark,
-            ),
+
+            if (isSelectionMode)
+              SelectionActionBar(
+                selectedCount: selectedTodos.length,
+                onCopy: openExportSheet,
+                onToggleDone: bulkToggleDone,
+                onDelete: bulkDelete,
+                onCancel: exitSelectionMode,
+              )
+            else
+              TodoStats(
+                total: todos.length,
+                left: todos.where((todo) => !todo.isDone).length,
+                isDark: isDark,
+              ),
           ],
         ),
       ),
     );
+  }
+
+  void bulkDelete() {
+    if (selectedTodos.isEmpty) return;
+    final toDelete = Set<Todo>.from(selectedTodos);
+    setState(() {
+      todos.removeWhere((t) => toDelete.contains(t));
+    });
+    _saveTodos();
+    _filterAndSortTodos();
+    exitSelectionMode();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${toDelete.length} task${toDelete.length > 1 ? 's' : ''} deleted',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void bulkToggleDone() {
+    if (selectedTodos.isEmpty) return;
+
+    final allDone = selectedTodos.every((t) => t.isDone);
+    setState(() {
+      for (final todo in selectedTodos.toList()) {
+        final index = todos.indexOf(todo);
+        if (index != -1) {
+          todos[index] = Todo(
+            title: todos[index].title,
+            description: todos[index].description,
+            isDone: !allDone,
+            priority: todos[index].priority,
+            createdAt: todos[index].createdAt,
+          );
+        }
+      }
+    });
+    _saveTodos();
+    _filterAndSortTodos();
+    exitSelectionMode();
   }
 
   void clearCompleted() {
@@ -185,6 +241,8 @@ class TodoScreenState extends State<TodoScreen> {
       lastDeleted = todos[index];
       lastDeletedIndex = index;
       todos.removeAt(index);
+      selectedTodos.remove(todo);
+      if (selectedTodos.isEmpty) isSelectionMode = false;
     });
     _saveTodos();
     _filterAndSortTodos();
@@ -240,6 +298,20 @@ class TodoScreenState extends State<TodoScreen> {
     );
   }
 
+  void enterSelectionMode(Todo todo) {
+    setState(() {
+      isSelectionMode = true;
+      selectedTodos.add(todo);
+    });
+  }
+
+  void exitSelectionMode() {
+    setState(() {
+      isSelectionMode = false;
+      selectedTodos.clear();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -250,6 +322,20 @@ class TodoScreenState extends State<TodoScreen> {
         _filterAndSortTodos();
       });
     });
+  }
+
+  void openExportSheet() {
+    if (selectedTodos.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey[900]
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => ExportBottomSheet(todos: selectedTodos.toList()),
+    );
   }
 
   void toggleDone(Todo todo) {
@@ -276,6 +362,62 @@ class TodoScreenState extends State<TodoScreen> {
     });
     _saveTodos();
     _filterAndSortTodos();
+  }
+
+  void toggleSelection(Todo todo) {
+    setState(() {
+      if (selectedTodos.contains(todo)) {
+        selectedTodos.remove(todo);
+      } else {
+        selectedTodos.add(todo);
+      }
+      if (selectedTodos.isEmpty) {
+        isSelectionMode = false;
+      }
+    });
+  }
+
+  AppBar _buildNormalAppBar(bool allDone) {
+    return AppBar(
+      title: const Text('Do Deez'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.select_all),
+          onPressed: filteredTodos.isEmpty ? null : toggleSelectAll,
+          tooltip: allDone ? 'Unselect all' : 'Select all',
+        ),
+        IconButton(
+          icon: const Icon(Icons.cleaning_services),
+          onPressed: clearCompleted,
+          tooltip: 'Clear completed tasks',
+        ),
+      ],
+    );
+  }
+
+  AppBar _buildSelectionAppBar() {
+    return AppBar(
+      backgroundColor: Theme.of(context).colorScheme.primary
+          .withValues(alpha: 0.15),
+      automaticallyImplyLeading: false,
+      title: const Text('Select tasks'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.select_all),
+          onPressed: () {
+            setState(() {
+              if (selectedTodos.length == filteredTodos.length) {
+                selectedTodos.clear();
+                isSelectionMode = false;
+              } else {
+                selectedTodos.addAll(filteredTodos);
+              }
+            });
+          },
+          tooltip: 'Select all visible',
+        ),
+      ],
+    );
   }
 
   void _filterAndSortTodos() {

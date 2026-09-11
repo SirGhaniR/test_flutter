@@ -11,6 +11,10 @@ class TodoGroup extends StatelessWidget {
   final Function(Todo) onToggle;
   final Function(Todo) onDelete;
   final Function(Todo) onEdit;
+  final Function(Todo) onLongPress;
+  final Set<Todo> selectedTodos;
+  final bool isSelectionMode;
+  final Function(Todo) onSelectionToggle;
 
   const TodoGroup({
     super.key,
@@ -20,6 +24,10 @@ class TodoGroup extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
+    required this.onLongPress,
+    required this.selectedTodos,
+    required this.isSelectionMode,
+    required this.onSelectionToggle,
   });
 
   @override
@@ -27,7 +35,7 @@ class TodoGroup extends StatelessWidget {
     if (tasks.isEmpty) return const SizedBox.shrink();
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 14),
       elevation: isDark ? 0 : 1,
       color: isDark ? Colors.grey[850] : Colors.white,
       child: Theme(
@@ -81,6 +89,10 @@ class TodoGroup extends StatelessWidget {
               onToggle: () => onToggle(todo),
               onDelete: () => onDelete(todo),
               onEdit: () => onEdit(todo),
+              onLongPress: () => onLongPress(todo),
+              isSelectionMode: isSelectionMode,
+              isSelected: selectedTodos.contains(todo),
+              onSelectionToggle: () => onSelectionToggle(todo),
             );
           }).toList(),
         ),

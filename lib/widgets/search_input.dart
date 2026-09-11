@@ -19,7 +19,7 @@ class SearchInput extends StatelessWidget {
       decoration: InputDecoration(
         hintText: 'Search tasks...',
         prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+        border: OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         suffixIcon: query.isNotEmpty
             ? IconButton(icon: const Icon(Icons.clear), onPressed: onClear)
