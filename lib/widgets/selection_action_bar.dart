@@ -27,7 +27,7 @@ class SelectionActionBar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
-          spacing: 4,
+            spacing: 4,
             children: [
               IconButton(
                 icon: const Icon(Icons.close),
@@ -76,6 +76,9 @@ class SelectionActionBar extends StatelessWidget {
                 icon: const Icon(Icons.copy_all, size: 18),
                 label: const Text('Copy'),
                 style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,

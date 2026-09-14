@@ -24,7 +24,7 @@ class TodoExporter {
       if (todo.description.isNotEmpty) {
         final lines = todo.description.split('\n');
         for (final line in lines) {
-          buffer.writeln('  > $line');
+          buffer.writeln('  > $line  ');
         }
       }
     }

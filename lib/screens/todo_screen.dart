@@ -7,6 +7,7 @@ import '../models/todo.dart';
 import '../services/todo_storage.dart';
 import '../widgets/add_todo_input.dart';
 import '../widgets/export_bottom_sheet.dart';
+import '../widgets/import_bottom_sheet.dart';
 import '../widgets/search_input.dart';
 import '../widgets/selection_action_bar.dart';
 import '../widgets/sort_dropdown.dart';
@@ -338,6 +339,28 @@ class TodoScreenState extends State<TodoScreen> {
     );
   }
 
+  void openImportSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey[900]
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => ImportBottomSheet(
+        onImport: (importedTodos) {
+          setState(() {
+            todos.addAll(importedTodos);
+          });
+          _saveTodos();
+          _filterAndSortTodos();
+        },
+      ),
+    );
+  }
+
   void toggleDone(Todo todo) {
     final index = todos.indexOf(todo);
     setState(() {
@@ -381,6 +404,11 @@ class TodoScreenState extends State<TodoScreen> {
     return AppBar(
       title: const Text('Do Deez'),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.download),
+          onPressed: openImportSheet,
+          tooltip: 'Import tasks',
+        ),
         IconButton(
           icon: const Icon(Icons.select_all),
           onPressed: filteredTodos.isEmpty ? null : toggleSelectAll,
