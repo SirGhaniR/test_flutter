@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
 
 import '../logic/todo_exporter.dart';
 import '../models/todo.dart';
@@ -50,7 +51,7 @@ class ExportBottomSheet extends StatelessWidget {
             ListTile(
               leading: CircleAvatar(
                 backgroundColor: Colors.amber.withValues(alpha: 0.2),
-                child: const Icon(Icons.data_object, color: Colors.amber),
+                child: const Icon(Symbols.file_json, color: Colors.amber),
               ),
               title: const Text('Copy as JSON'),
               subtitle: const Text(
@@ -62,7 +63,7 @@ class ExportBottomSheet extends StatelessWidget {
             ListTile(
               leading: CircleAvatar(
                 backgroundColor: Colors.blue.withValues(alpha: 0.2),
-                child: const Icon(Icons.notes, color: Colors.blue),
+                child: const Icon(Symbols.markdown, color: Colors.blue),
               ),
               title: const Text('Copy as Markdown'),
               subtitle: const Text('Readable task list - great for sharing'),

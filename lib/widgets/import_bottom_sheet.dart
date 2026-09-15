@@ -318,9 +318,6 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
     if (_preview?.isSuccess == true) {
       widget.onImport(_preview!.todos);
       Navigator.pop(context);
-      _showSnack(
-        "Imported ${_preview!.todos.length} task${_preview!.todos.length > 1 ? 's' : ''}",
-      );
     }
   }
 

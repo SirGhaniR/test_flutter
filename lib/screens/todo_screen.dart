@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../dialogs/confirm_dialog.dart';
 import '../dialogs/edit_todo_dialog.dart';
 import '../logic/todo_filter.dart';
 import '../logic/todo_grouping.dart';
@@ -24,8 +26,6 @@ class TodoScreen extends StatefulWidget {
 class TodoScreenState extends State<TodoScreen> {
   List<Todo> todos = [];
   List<Todo> filteredTodos = [];
-  Todo? lastDeleted;
-  int? lastDeletedIndex;
 
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
@@ -40,6 +40,7 @@ class TodoScreenState extends State<TodoScreen> {
 
   void addTodo() {
     if (titleController.text.isNotEmpty) {
+      HapticFeedback.selectionClick();
       setState(() {
         todos.add(
           Todo(
@@ -144,24 +145,30 @@ class TodoScreenState extends State<TodoScreen> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      itemCount: DateGroup.values.length,
-                      itemBuilder: (context, groupIndex) {
-                        final group = DateGroup.values[groupIndex];
-                        final tasks = groupedTodos[group] ?? [];
-                        return TodoGroup(
-                          group: group,
-                          tasks: tasks,
-                          isDark: isDark,
-                          onToggle: toggleDone,
-                          onDelete: deleteTodo,
-                          onEdit: editTodo,
-                          onLongPress: enterSelectionMode,
-                          selectedTodos: selectedTodos,
-                          isSelectionMode: isSelectionMode,
-                          onSelectionToggle: toggleSelection,
-                        );
-                      },
+                  : RefreshIndicator(
+                      onRefresh: _refreshTodos,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: DateGroup.values.length,
+                        itemBuilder: (context, groupIndex) {
+                          final group = DateGroup.values[groupIndex];
+                          final tasks = groupedTodos[group] ?? [];
+                          return TodoGroup(
+                            group: group,
+                            tasks: tasks,
+                            isDark: isDark,
+                            onToggle: toggleDone,
+                            onDelete: deleteTodo,
+                            onEdit: editTodo,
+                            onLongPress: enterSelectionMode,
+                            selectedTodos: selectedTodos,
+                            isSelectionMode: isSelectionMode,
+                            onSelectionToggle: toggleSelection,
+                            onGroupSelectToggle: () =>
+                                toggleGroupSelection(tasks),
+                          );
+                        },
+                      ),
                     ),
             ),
 
@@ -185,9 +192,25 @@ class TodoScreenState extends State<TodoScreen> {
     );
   }
 
-  void bulkDelete() {
+  Future<void> bulkDelete() async {
     if (selectedTodos.isEmpty) return;
+
+    if (selectedTodos.length >= 3) {
+      final confirmed = await ConfirmDialog.show(
+        context,
+        title: 'Delete ${selectedTodos.length} tasks?',
+        message:
+            'This will remove ${selectedTodos.length} tasks. You can undo afterwards.',
+        confirmLabel: 'Delete',
+        confirmColor: Colors.red,
+        icon: Icons.warning_amber_rounded,
+      );
+      if (!confirmed) return;
+    }
+
+    HapticFeedback.mediumImpact();
     final toDelete = Set<Todo>.from(selectedTodos);
+
     setState(() {
       todos.removeWhere((t) => toDelete.contains(t));
     });
@@ -195,18 +218,21 @@ class TodoScreenState extends State<TodoScreen> {
     _filterAndSortTodos();
     exitSelectionMode();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${toDelete.length} task${toDelete.length > 1 ? 's' : ''} deleted',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    _showUndoSnack(
+      '${toDelete.length} task${toDelete.length > 1 ? 's' : ''} deleted',
+      () {
+        setState(() {
+          todos.addAll(toDelete);
+        });
+        _saveTodos();
+        _filterAndSortTodos();
+      },
     );
   }
 
   void bulkToggleDone() {
     if (selectedTodos.isEmpty) return;
+    HapticFeedback.selectionClick();
 
     final allDone = selectedTodos.every((t) => t.isDone);
     setState(() {
@@ -228,19 +254,56 @@ class TodoScreenState extends State<TodoScreen> {
     exitSelectionMode();
   }
 
-  void clearCompleted() {
+  Future<void> clearCompleted() async {
+    final completed = todos.where((t) => t.isDone).toList();
+    if (completed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No completed tasks to clear'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title:
+          'Clear ${completed.length} completed task${completed.length > 1 ? 's' : ''}?',
+      message: 'This will remove all completed tasks. You can undo afterwards.',
+      confirmLabel: 'Clear',
+      confirmColor: Colors.red,
+      icon: Icons.cleaning_services,
+    );
+    if (!confirmed) return;
+
+    HapticFeedback.mediumImpact();
+    final backup = List<Todo>.from(completed);
+
     setState(() {
       todos.removeWhere((todo) => todo.isDone);
     });
     _saveTodos();
     _filterAndSortTodos();
+
+    _showUndoSnack(
+      '${backup.length} completed task${backup.length > 1 ? 's' : ''} cleared',
+      () {
+        setState(() {
+          todos.addAll(backup);
+        });
+        _saveTodos();
+        _filterAndSortTodos();
+      },
+    );
   }
 
   void deleteTodo(Todo todo) {
+    HapticFeedback.lightImpact();
     final index = todos.indexOf(todo);
+    final deleted = todos[index];
+
     setState(() {
-      lastDeleted = todos[index];
-      lastDeletedIndex = index;
       todos.removeAt(index);
       selectedTodos.remove(todo);
       if (selectedTodos.isEmpty) isSelectionMode = false;
@@ -248,24 +311,13 @@ class TodoScreenState extends State<TodoScreen> {
     _saveTodos();
     _filterAndSortTodos();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Task deleted'),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            if (lastDeleted != null && lastDeletedIndex != null) {
-              setState(() {
-                todos.insert(lastDeletedIndex!, lastDeleted!);
-              });
-              _saveTodos();
-              _filterAndSortTodos();
-            }
-          },
-        ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    _showUndoSnack('Task deleted', () {
+      setState(() {
+        todos.insert(index.clamp(0, todos.length), deleted);
+      });
+      _saveTodos();
+      _filterAndSortTodos();
+    });
   }
 
   @override
@@ -283,6 +335,7 @@ class TodoScreenState extends State<TodoScreen> {
       builder: (context) => EditTodoDialog(
         todo: todo,
         onSave: (String newTitle, String newDescription, Priority newPriority) {
+          HapticFeedback.selectionClick();
           setState(() {
             todos[index] = Todo(
               title: newTitle,
@@ -300,6 +353,7 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   void enterSelectionMode(Todo todo) {
+    HapticFeedback.mediumImpact();
     setState(() {
       isSelectionMode = true;
       selectedTodos.add(todo);
@@ -327,19 +381,21 @@ class TodoScreenState extends State<TodoScreen> {
 
   void openExportSheet() {
     if (selectedTodos.isEmpty) return;
+    HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? Colors.grey[900]
           : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
       builder: (_) => ExportBottomSheet(todos: selectedTodos.toList()),
     );
   }
 
   void openImportSheet() {
+    HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -347,21 +403,35 @@ class TodoScreenState extends State<TodoScreen> {
           ? Colors.grey[900]
           : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
       builder: (_) => ImportBottomSheet(
         onImport: (importedTodos) {
+          HapticFeedback.mediumImpact();
+          final backup = List<Todo>.from(importedTodos);
           setState(() {
             todos.addAll(importedTodos);
           });
           _saveTodos();
           _filterAndSortTodos();
+
+          _showUndoSnack(
+            'Imported ${backup.length} task${backup.length > 1 ? 's' : ''}',
+            () {
+              setState(() {
+                todos.removeWhere((t) => backup.contains(t));
+              });
+              _saveTodos();
+              _filterAndSortTodos();
+            },
+          );
         },
       ),
     );
   }
 
   void toggleDone(Todo todo) {
+    HapticFeedback.lightImpact();
     final index = todos.indexOf(todo);
     setState(() {
       todos[index] = Todo(
@@ -376,7 +446,23 @@ class TodoScreenState extends State<TodoScreen> {
     _filterAndSortTodos();
   }
 
+  void toggleGroupSelection(List<Todo> groupTasks) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      final allSelected = groupTasks.every((t) => selectedTodos.contains(t));
+      if (allSelected) {
+        selectedTodos.removeAll(groupTasks);
+      } else {
+        selectedTodos.addAll(groupTasks);
+      }
+      if (selectedTodos.isEmpty) {
+        isSelectionMode = false;
+      }
+    });
+  }
+
   void toggleSelectAll() {
+    HapticFeedback.selectionClick();
     setState(() {
       bool allDone = todos.every((todo) => todo.isDone);
       for (var todo in todos) {
@@ -388,6 +474,7 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   void toggleSelection(Todo todo) {
+    HapticFeedback.selectionClick();
     setState(() {
       if (selectedTodos.contains(todo)) {
         selectedTodos.remove(todo);
@@ -433,6 +520,7 @@ class TodoScreenState extends State<TodoScreen> {
         IconButton(
           icon: const Icon(Icons.select_all),
           onPressed: () {
+            HapticFeedback.selectionClick();
             setState(() {
               if (selectedTodos.length == filteredTodos.length) {
                 selectedTodos.clear();
@@ -463,8 +551,25 @@ class TodoScreenState extends State<TodoScreen> {
     });
   }
 
+  Future<void> _refreshTodos() async {
+    HapticFeedback.selectionClick();
+    _loadTodos();
+  }
+
   void _saveTodos() {
     TodoStorage.saveTodos(todos);
+  }
+
+  void _showUndoSnack(String message, VoidCallback onUndo) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        persist: false,
+        content: Text(message),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(label: 'UNDO', onPressed: onUndo),
+      ),
+    );
   }
 
   List<Todo> _sortTodos(List<Todo> todosToSort) {
@@ -490,6 +595,9 @@ class TodoScreenState extends State<TodoScreen> {
         break;
     }
 
-    return sorted;
+    final incomplete = sorted.where((t) => !t.isDone).toList();
+    final complete = sorted.where((t) => t.isDone).toList();
+
+    return [...incomplete, ...complete];
   }
 }

@@ -15,6 +15,7 @@ class TodoGroup extends StatelessWidget {
   final Set<Todo> selectedTodos;
   final bool isSelectionMode;
   final Function(Todo) onSelectionToggle;
+  final VoidCallback onGroupSelectToggle;
 
   const TodoGroup({
     super.key,
@@ -28,11 +29,17 @@ class TodoGroup extends StatelessWidget {
     required this.selectedTodos,
     required this.isSelectionMode,
     required this.onSelectionToggle,
+    required this.onGroupSelectToggle,
   });
 
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) return const SizedBox.shrink();
+
+    final accent = Theme.of(context).colorScheme.primary;
+    final allSelected =
+        tasks.isNotEmpty && tasks.every((t) => selectedTodos.contains(t));
+    final someSelected = tasks.any((t) => selectedTodos.contains(t));
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 14),
@@ -41,13 +48,37 @@ class TodoGroup extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          leading: Container(
-            width: 4,
-            height: 30,
-            decoration: BoxDecoration(
-              color: TodoGrouper.getGroupColor(group),
-              borderRadius: BorderRadius.circular(4),
-            ),
+          leading: Row(
+          spacing: 8,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isSelectionMode) ...[
+                GestureDetector(
+                  onTap: onGroupSelectToggle,
+                  child: Icon(
+                    allSelected
+                        ? Icons.check_circle
+                        : (someSelected
+                              ? Icons.indeterminate_check_box
+                              : Icons.radio_button_unchecked),
+                    color: allSelected || someSelected
+                        ? accent
+                        : (isDark
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400),
+                    size: 24,
+                  ),
+                ),
+              ],
+              Container(
+                width: 4,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: TodoGrouper.getGroupColor(group),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
           ),
           title: Text(
             Todo.getDateGroupLabel(group),

@@ -101,6 +101,7 @@ class TodoItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
+      spacing: 12,
         children: [
           Icon(
             isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -109,17 +110,15 @@ class TodoItem extends StatelessWidget {
                 : (isDark ? Colors.grey.shade500 : Colors.grey.shade400),
             size: 24,
           ),
-          const SizedBox(width: 12),
 
           Container(
             width: 4,
-            height: 32,
+            height: 30,
             decoration: BoxDecoration(
               color: todo.isDone ? Colors.grey : priorityColor,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 12),
 
           Expanded(
             child: Text(
@@ -136,7 +135,6 @@ class TodoItem extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -171,16 +169,16 @@ class TodoItem extends StatelessWidget {
     return ExpansionTile(
       leading: Row(
         mainAxisSize: MainAxisSize.min,
+        spacing: 12,
         children: [
           Container(
             width: 4,
-            height: 32,
+            height: 30,
             decoration: BoxDecoration(
               color: todo.isDone ? Colors.grey : priorityColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(width: 12),
           IconButton(
             icon: Icon(
               todo.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -210,6 +208,7 @@ class TodoItem extends StatelessWidget {
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
+        spacing: 8,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -232,7 +231,6 @@ class TodoItem extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
             onPressed: onDelete,
@@ -246,9 +244,11 @@ class TodoItem extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
             children: [
               if (todo.description.isNotEmpty) ...[
                 Row(
+                spacing: 8,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
@@ -258,7 +258,6 @@ class TodoItem extends StatelessWidget {
                           ? Colors.grey.shade400
                           : Colors.grey.shade600,
                     ),
-                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         todo.description,
@@ -277,16 +276,15 @@ class TodoItem extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
               ],
               Row(
+              spacing: 4,
                 children: [
                   Icon(
                     Icons.access_time,
                     size: 14,
                     color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
-                  const SizedBox(width: 4),
                   Text(
                     'Updated ${todo.timeAgo}',
                     style: TextStyle(
@@ -296,13 +294,14 @@ class TodoItem extends StatelessWidget {
                           : Colors.grey.shade500,
                     ),
                   ),
+
                   const SizedBox(width: 16),
+
                   Icon(
                     Icons.calendar_today,
                     size: 14,
                     color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
-                  const SizedBox(width: 4),
                   Text(
                     'Created ${todo.createdDate}',
                     style: TextStyle(
