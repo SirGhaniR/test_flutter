@@ -166,6 +166,7 @@ class TodoScreenState extends State<TodoScreen> {
                             onSelectionToggle: toggleSelection,
                             onGroupSelectToggle: () =>
                                 toggleGroupSelection(tasks),
+                            searchQuery: searchQuery,
                           );
                         },
                       ),
@@ -406,6 +407,7 @@ class TodoScreenState extends State<TodoScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
       builder: (_) => ImportBottomSheet(
+        existingTitles: todos.map((t) => t.title).toSet(),
         onImport: (importedTodos) {
           HapticFeedback.mediumImpact();
           final backup = List<Todo>.from(importedTodos);

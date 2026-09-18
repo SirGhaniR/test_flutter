@@ -16,6 +16,7 @@ class TodoGroup extends StatelessWidget {
   final bool isSelectionMode;
   final Function(Todo) onSelectionToggle;
   final VoidCallback onGroupSelectToggle;
+  final String searchQuery;
 
   const TodoGroup({
     super.key,
@@ -30,6 +31,7 @@ class TodoGroup extends StatelessWidget {
     required this.isSelectionMode,
     required this.onSelectionToggle,
     required this.onGroupSelectToggle,
+    required this.searchQuery,
   });
 
   @override
@@ -49,7 +51,7 @@ class TodoGroup extends StatelessWidget {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           leading: Row(
-          spacing: 8,
+            spacing: 8,
             mainAxisSize: MainAxisSize.min,
             children: [
               if (isSelectionMode) ...[
@@ -124,6 +126,7 @@ class TodoGroup extends StatelessWidget {
               isSelectionMode: isSelectionMode,
               isSelected: selectedTodos.contains(todo),
               onSelectionToggle: () => onSelectionToggle(todo),
+              searchQuery: searchQuery,
             );
           }).toList(),
         ),

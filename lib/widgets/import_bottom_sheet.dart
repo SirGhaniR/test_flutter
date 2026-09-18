@@ -6,8 +6,13 @@ import '../models/todo.dart';
 
 class ImportBottomSheet extends StatefulWidget {
   final void Function(List<Todo> todos) onImport;
+  final Set<String> existingTitles;
 
-  const ImportBottomSheet({super.key, required this.onImport});
+  const ImportBottomSheet({
+    super.key,
+    required this.onImport,
+    required this.existingTitles,
+  });
 
   @override
   State<ImportBottomSheet> createState() => _ImportBottomSheetState();
@@ -17,6 +22,28 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
   final TextEditingController _controller = TextEditingController();
   ImportResult? _preview;
   bool _showingPreview = false;
+  bool _skipDuplicates = true;
+
+  List<Todo> get _duplicates {
+    if (_preview == null) return [];
+    final existing = _normalizedExistingTitles;
+    return _preview!.todos
+        .where((t) => existing.contains(t.title.trim().toLowerCase()))
+        .toList();
+  }
+
+  Set<String> get _normalizedExistingTitles {
+    return widget.existingTitles.map((t) => t.trim().toLowerCase()).toSet();
+  }
+
+  List<Todo> get _toImport {
+    if (_preview == null) return [];
+    if (!_skipDuplicates) return _preview!.todos;
+    final existing = _normalizedExistingTitles;
+    return _preview!.todos
+        .where((t) => !existing.contains(t.title.trim().toLowerCase()))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,11 +177,14 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
                     ),
                     Expanded(
                       flex: 2,
-                      child: _showingPreview && _preview?.isSuccess == true
+                      child:
+                          _showingPreview &&
+                              _preview?.isSuccess == true &&
+                              _toImport.isNotEmpty
                           ? FilledButton.icon(
                               onPressed: _confirmImport,
                               icon: const Icon(Icons.check, size: 18),
-                              label: Text('Import ${_preview!.todos.length}'),
+                              label: Text('Import ${_toImport.length}'),
                               style: FilledButton.styleFrom(
                                 backgroundColor: accent,
                                 padding: const EdgeInsets.symmetric(
@@ -225,6 +255,8 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
       );
     }
 
+    final duplicates = _duplicates;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -252,6 +284,7 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
               ),
             ],
           ),
+
           ...result.todos
               .take(3)
               .map(
@@ -300,6 +333,7 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
                   ],
                 ),
               ),
+
           if (result.todos.length > 3)
             Text(
               '+ ${result.todos.length - 3} more...',
@@ -309,14 +343,81 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
                 color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
               ),
             ),
+
+          if (duplicates.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Column(
+                spacing: 6,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    spacing: 6,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                      Text(
+                        '${duplicates.length} duplicate title${duplicates.length > 1 ? 's' : ''} found',
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _skipDuplicates = !_skipDuplicates;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        spacing: 6,
+                        children: [
+                          Icon(
+                            _skipDuplicates
+                                ? Icons.check_box
+                                : Icons.check_box_outline_blank,
+                            size: 18,
+                            color: Colors.amber,
+                          ),
+                          Text(
+                            'Skip duplicates',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey.shade200
+                                  : Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   void _confirmImport() {
-    if (_preview?.isSuccess == true) {
-      widget.onImport(_preview!.todos);
+    if (_preview?.isSuccess == true && _toImport.isNotEmpty) {
+      widget.onImport(_toImport);
       Navigator.pop(context);
     }
   }
@@ -339,6 +440,7 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
     setState(() {
       _preview = result;
       _showingPreview = true;
+      _skipDuplicates = true;
     });
   }
 

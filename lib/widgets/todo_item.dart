@@ -12,6 +12,7 @@ class TodoItem extends StatelessWidget {
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback onSelectionToggle;
+  final String searchQuery;
 
   const TodoItem({
     super.key,
@@ -24,6 +25,7 @@ class TodoItem extends StatelessWidget {
     required this.isSelectionMode,
     required this.isSelected,
     required this.onSelectionToggle,
+    required this.searchQuery,
   });
 
   @override
@@ -101,7 +103,7 @@ class TodoItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
-      spacing: 12,
+        spacing: 12,
         children: [
           Icon(
             isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -121,8 +123,8 @@ class TodoItem extends StatelessWidget {
           ),
 
           Expanded(
-            child: Text(
-              todo.title,
+            child: _buildHighlightedText(
+              text: todo.title,
               style: TextStyle(
                 decoration: todo.isDone
                     ? TextDecoration.lineThrough
@@ -193,8 +195,8 @@ class TodoItem extends StatelessWidget {
           ),
         ],
       ),
-      title: Text(
-        todo.title,
+      title: _buildHighlightedText(
+        text: todo.title,
         style: TextStyle(
           decoration: todo.isDone
               ? TextDecoration.lineThrough
@@ -248,7 +250,7 @@ class TodoItem extends StatelessWidget {
             children: [
               if (todo.description.isNotEmpty) ...[
                 Row(
-                spacing: 8,
+                  spacing: 8,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
@@ -259,8 +261,8 @@ class TodoItem extends StatelessWidget {
                           : Colors.grey.shade600,
                     ),
                     Expanded(
-                      child: Text(
-                        todo.description,
+                      child: _buildHighlightedText(
+                        text: todo.description,
                         style: TextStyle(
                           color: todo.isDone
                               ? (isDark
@@ -278,7 +280,7 @@ class TodoItem extends StatelessWidget {
                 ),
               ],
               Row(
-              spacing: 4,
+                spacing: 4,
                 children: [
                   Icon(
                     Icons.access_time,
@@ -329,5 +331,44 @@ class TodoItem extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildHighlightedText({
+    required String text,
+    required TextStyle style,
+  }) {
+    final query = searchQuery.trim();
+    if (query.isEmpty) return Text(text, style: style);
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+
+    final spans = <TextSpan>[];
+    int start = 0;
+
+    while (true) {
+      final index = lowerText.indexOf(lowerQuery, start);
+      if (index < 0) {
+        spans.add(TextSpan(text: text.substring(start), style: style));
+        break;
+      }
+
+      if (index > start) {
+        spans.add(TextSpan(text: text.substring(start, index), style: style));
+      }
+
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: style.copyWith(
+            backgroundColor: Colors.orange.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+
+      start = index + query.length;
+    }
+
+    return Text.rich(TextSpan(children: spans), maxLines: null);
   }
 }
