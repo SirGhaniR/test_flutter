@@ -41,9 +41,9 @@ class AppTheme {
   );
 
   static ThemeData darkTheme = ThemeData.dark().copyWith(
-    primaryColor: Colors.deepPurple,
-    colorScheme: const ColorScheme.dark(
-      primary: Colors.deepPurple,
+    primaryColor: Colors.deepPurple.shade300,
+    colorScheme: ColorScheme.dark(
+      primary: Colors.deepPurple.shade300,
       secondary: Colors.purpleAccent,
     ),
     appBarTheme: AppBarTheme(
@@ -66,12 +66,12 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: const BorderSide(color: Colors.deepPurple, width: 1),
+        borderSide: BorderSide(color: Colors.deepPurple.shade300, width: 1),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.deepPurple.shade300,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),

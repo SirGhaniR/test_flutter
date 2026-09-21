@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../dialogs/confirm_dialog.dart';
-import '../dialogs/edit_todo_dialog.dart';
 import '../logic/todo_filter.dart';
 import '../logic/todo_grouping.dart';
 import '../models/todo.dart';
 import '../services/todo_storage.dart';
-import '../widgets/add_todo_input.dart';
+import '../widgets/add_todo_bottom_sheet.dart';
+import '../widgets/edit_todo_bottom_sheet.dart';
 import '../widgets/export_bottom_sheet.dart';
 import '../widgets/import_bottom_sheet.dart';
 import '../widgets/search_input.dart';
@@ -27,35 +27,13 @@ class TodoScreenState extends State<TodoScreen> {
   List<Todo> todos = [];
   List<Todo> filteredTodos = [];
 
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
 
-  Priority selectedPriority = Priority.low;
   String searchQuery = '';
   SortOption currentSort = SortOption.newest;
 
   final Set<Todo> selectedTodos = {};
   bool isSelectionMode = false;
-
-  void addTodo() {
-    if (titleController.text.isNotEmpty) {
-      HapticFeedback.selectionClick();
-      setState(() {
-        todos.add(
-          Todo(
-            title: titleController.text,
-            description: descriptionController.text,
-            priority: selectedPriority,
-          ),
-        );
-        titleController.clear();
-        descriptionController.clear();
-      });
-      _saveTodos();
-      _filterAndSortTodos();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,12 +48,26 @@ class TodoScreenState extends State<TodoScreen> {
       appBar: isSelectionMode
           ? _buildSelectionAppBar()
           : _buildNormalAppBar(allDone),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: isSelectionMode
+          ? null
+          : Container(
+            margin: EdgeInsets.only(bottom: 60),
+            child: FloatingActionButton(
+                onPressed: openAddSheet,
+                tooltip: 'Add task',
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(Icons.add),
+              ),
+          ),
       body: Container(
         margin: const EdgeInsetsGeometry.only(top: 20),
         child: Column(
           spacing: 8,
           children: [
-            if (!isSelectionMode) ...[
+            if (!isSelectionMode)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
@@ -102,20 +94,6 @@ class TodoScreenState extends State<TodoScreen> {
                   ],
                 ),
               ),
-              AddTodoInput(
-                titleController: titleController,
-                descriptionController: descriptionController,
-                selectedPriority: selectedPriority,
-                onPriorityChanged: (newPriority) {
-                  if (newPriority != null) {
-                    setState(() {
-                      selectedPriority = newPriority;
-                    });
-                  }
-                },
-                onAdd: addTodo,
-              ),
-            ],
 
             Expanded(
               child: filteredTodos.isEmpty
@@ -133,7 +111,7 @@ class TodoScreenState extends State<TodoScreen> {
                           ),
                           Text(
                             searchQuery.isEmpty
-                                ? 'No tasks yet! Add one above.'
+                                ? 'No tasks yet! Tap + to add one.'
                                 : 'No tasks match your search.',
                             style: TextStyle(
                               fontSize: 16,
@@ -167,6 +145,17 @@ class TodoScreenState extends State<TodoScreen> {
                             onGroupSelectToggle: () =>
                                 toggleGroupSelection(tasks),
                             searchQuery: searchQuery,
+                            onUpdate: (updatedTodo) {
+                              final index = todos.indexWhere(
+                                (t) => t.id == updatedTodo.id,
+                              );
+                              if (index < 0) return;
+                              setState(() {
+                                todos[index] = updatedTodo;
+                              });
+                              _saveTodos();
+                              _filterAndSortTodos();
+                            },
                           );
                         },
                       ),
@@ -240,13 +229,7 @@ class TodoScreenState extends State<TodoScreen> {
       for (final todo in selectedTodos.toList()) {
         final index = todos.indexOf(todo);
         if (index != -1) {
-          todos[index] = Todo(
-            title: todos[index].title,
-            description: todos[index].description,
-            isDone: !allDone,
-            priority: todos[index].priority,
-            createdAt: todos[index].createdAt,
-          );
+          todos[index] = todos[index].copyWith(isDone: !allDone);
         }
       }
     });
@@ -323,34 +306,34 @@ class TodoScreenState extends State<TodoScreen> {
 
   @override
   void dispose() {
-    titleController.dispose();
-    descriptionController.dispose();
     searchController.dispose();
     super.dispose();
   }
 
-  void editTodo(Todo todo) {
-    final index = todos.indexOf(todo);
-    showDialog(
+  Future<void> editTodo(Todo todo) async {
+    HapticFeedback.selectionClick();
+    final updated = await showModalBottomSheet<Todo>(
       context: context,
-      builder: (context) => EditTodoDialog(
-        todo: todo,
-        onSave: (String newTitle, String newDescription, Priority newPriority) {
-          HapticFeedback.selectionClick();
-          setState(() {
-            todos[index] = Todo(
-              title: newTitle,
-              description: newDescription,
-              isDone: todos[index].isDone,
-              priority: newPriority,
-              createdAt: todos[index].createdAt,
-            );
-          });
-          _saveTodos();
-          _filterAndSortTodos();
-        },
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey[900]
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
+      builder: (_) => EditTodoBottomSheet(todo: todo),
     );
+
+    if (updated == null) return;
+
+    final index = todos.indexWhere((t) => t.id == updated.id);
+    if (index < 0) return;
+
+    setState(() {
+      todos[index] = updated;
+    });
+    _saveTodos();
+    _filterAndSortTodos();
   }
 
   void enterSelectionMode(Todo todo) {
@@ -377,6 +360,38 @@ class TodoScreenState extends State<TodoScreen> {
         searchQuery = searchController.text;
         _filterAndSortTodos();
       });
+    });
+  }
+
+  Future<void> openAddSheet() async {
+    HapticFeedback.selectionClick();
+    final newTodo = await showModalBottomSheet<Todo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey[900]
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+      ),
+      builder: (_) => const AddTodoBottomSheet(),
+    );
+
+    if (newTodo == null) return;
+
+    HapticFeedback.mediumImpact();
+    setState(() {
+      todos.add(newTodo);
+    });
+    _saveTodos();
+    _filterAndSortTodos();
+
+    _showUndoSnack('Task added', () {
+      setState(() {
+        todos.removeWhere((t) => t.id == newTodo.id);
+      });
+      _saveTodos();
+      _filterAndSortTodos();
     });
   }
 
@@ -436,13 +451,7 @@ class TodoScreenState extends State<TodoScreen> {
     HapticFeedback.lightImpact();
     final index = todos.indexOf(todo);
     setState(() {
-      todos[index] = Todo(
-        title: todos[index].title,
-        description: todos[index].description,
-        isDone: !todos[index].isDone,
-        priority: todos[index].priority,
-        createdAt: todos[index].createdAt,
-      );
+      todos[index] = todos[index].copyWith(isDone: !todos[index].isDone);
     });
     _saveTodos();
     _filterAndSortTodos();

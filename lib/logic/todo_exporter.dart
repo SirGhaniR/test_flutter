@@ -5,7 +5,7 @@ import '../models/todo.dart';
 class TodoExporter {
   static String toJson(List<Todo> todos) {
     final List<Map<String, dynamic>> jsonList = todos
-        .map((todo) => _todoToMap(todo))
+        .map((todo) => todo.toJson())
         .toList();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
@@ -27,6 +27,11 @@ class TodoExporter {
           buffer.writeln('  > $line  ');
         }
       }
+
+      for (final subtask in todo.subtasks) {
+        final subCheckbox = subtask.isDone ? '[x]' : '[ ]';
+        buffer.writeln('  - $subCheckbox ${subtask.title}');
+      }
     }
 
     return buffer.toString().trimRight();
@@ -41,16 +46,5 @@ class TodoExporter {
       case Priority.high:
         return '🔴';
     }
-  }
-
-  static Map<String, dynamic> _todoToMap(Todo todo) {
-    return {
-      'title': todo.title,
-      'description': todo.description,
-      'isDone': todo.isDone,
-      'priority': todo.priority.name,
-      'createdAt': todo.createdAt.toIso8601String(),
-      'updatedAt': todo.updatedAt.toIso8601String(),
-    };
   }
 }

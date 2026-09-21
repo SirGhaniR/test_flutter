@@ -4,26 +4,93 @@ enum DateGroup { today, yesterday, thisWeek, older }
 
 enum Priority { low, medium, high }
 
+class Subtask {
+  final String id;
+  final String title;
+  bool isDone;
+
+  Subtask({String? id, required this.title, this.isDone = false})
+    : id = id ?? DateTime.now().microsecondsSinceEpoch.toString();
+
+  factory Subtask.fromJson(Map<String, dynamic> json) {
+    return Subtask(
+      id: json['id'] as String?,
+      title: json['title'] as String? ?? '',
+      isDone: json['isDone'] == true,
+    );
+  }
+
+  Subtask copyWith({String? id, String? title, bool? isDone}) {
+    return Subtask(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      isDone: isDone ?? this.isDone,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'title': title, 'isDone': isDone};
+  }
+}
+
 class Todo {
+  final String id;
   final String title;
   final String description;
   bool isDone;
   Priority priority;
   final DateTime createdAt;
   DateTime updatedAt;
+  List<Subtask> subtasks;
 
   Todo({
+    String? id,
     required this.title,
     required this.description,
     this.isDone = false,
     this.priority = Priority.medium,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    List<Subtask>? subtasks,
+  }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now(),
+       subtasks = subtasks ?? [];
+
+  factory Todo.fromJson(Map<String, dynamic> json) {
+    return Todo(
+      id: json['id'] as String?,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      isDone: json['isDone'] == true,
+      priority: Priority.values.firstWhere(
+        (p) => p.name == json['priority'],
+        orElse: () => Priority.medium,
+      ),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'])
+          : null,
+      subtasks:
+          (json['subtasks'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map((s) => Subtask.fromJson(s))
+              .toList() ??
+          [],
+    );
+  }
+
+  int get completedSubtasks => subtasks.where((s) => s.isDone).length;
 
   String get createdDate {
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
+  }
+
+  double get progress {
+    if (subtasks.isEmpty) return 0;
+    return completedSubtasks / subtasks.length;
   }
 
   String get timeAgo {
@@ -42,20 +109,37 @@ class Todo {
   }
 
   Todo copyWith({
+    String? id,
     String? title,
     String? description,
     bool? isDone,
     Priority? priority,
     DateTime? updatedAt,
+    List<Subtask>? subtasks,
   }) {
     return Todo(
+      id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
       isDone: isDone ?? this.isDone,
       priority: priority ?? this.priority,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      subtasks: subtasks ?? this.subtasks,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'isDone': isDone,
+      'priority': priority.name,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'subtasks': subtasks.map((s) => s.toJson()).toList(),
+    };
   }
 
   static DateGroup getDateGroup(DateTime date) {

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/todo.dart';
+import 'subtask_item.dart';
 
-class TodoItem extends StatelessWidget {
+class TodoItem extends StatefulWidget {
   final Todo todo;
   final int index;
   final VoidCallback onToggle;
@@ -13,6 +14,7 @@ class TodoItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onSelectionToggle;
   final String searchQuery;
+  final Function(Todo) onUpdate;
 
   const TodoItem({
     super.key,
@@ -26,21 +28,30 @@ class TodoItem extends StatelessWidget {
     required this.isSelected,
     required this.onSelectionToggle,
     required this.searchQuery,
+    required this.onUpdate,
   });
+
+  @override
+  State<TodoItem> createState() => _TodoItemState();
+}
+
+class _TodoItemState extends State<TodoItem> {
+  final TextEditingController _subtaskController = TextEditingController();
+  final FocusNode _subtaskFocusNode = FocusNode();
+  bool _addingSubtask = false;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final priorityColor = Todo.getPriorityColor(todo.priority);
+    final priorityColor = Todo.getPriorityColor(widget.todo.priority);
     final accent = Theme.of(context).colorScheme.primary;
 
-    if (isSelectionMode) {
+    if (widget.isSelectionMode) {
       return GestureDetector(
-        onTap: onSelectionToggle,
-        onLongPress: onLongPress,
+        onTap: widget.onSelectionToggle,
+        onLongPress: widget.onLongPress,
         behavior: HitTestBehavior.opaque,
         child: _buildCard(
-          context: context,
           isDark: isDark,
           priorityColor: priorityColor,
           accent: accent,
@@ -50,9 +61,8 @@ class TodoItem extends StatelessWidget {
     }
 
     return GestureDetector(
-      onLongPress: onLongPress,
+      onLongPress: widget.onLongPress,
       child: _buildCard(
-        context: context,
         isDark: isDark,
         priorityColor: priorityColor,
         accent: accent,
@@ -61,8 +71,14 @@ class TodoItem extends StatelessWidget {
     );
   }
 
+  @override
+  void dispose() {
+    _subtaskController.dispose();
+    _subtaskFocusNode.dispose();
+    super.dispose();
+  }
+
   Widget _buildCard({
-    required BuildContext context,
     required bool isDark,
     required Color priorityColor,
     required Color accent,
@@ -70,19 +86,19 @@ class TodoItem extends StatelessWidget {
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: isSelected ? 4 : (isDark ? 0 : 2),
-      color: isSelected
-          ? accent.withValues(alpha: isDark ? 0.25 : 0.12)
+      elevation: widget.isSelected ? 4 : (isDark ? 0 : 2),
+      color: widget.isSelected
+          ? accent.withValues(alpha: isDark ? 0.15 : 0.12)
           : (isDark ? Colors.grey[850] : Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(4),
         side: BorderSide(
-          color: isSelected
+          color: widget.isSelected
               ? accent
-              : (todo.isDone
+              : (widget.todo.isDone
                     ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
                     : priorityColor.withValues(alpha: 0.3)),
-          width: isSelected ? 2 : 1.5,
+          width: widget.isSelected ? 2 : 1.5,
         ),
       ),
       child: forceCollapsed
@@ -101,59 +117,55 @@ class TodoItem extends StatelessWidget {
     required Color accent,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       child: Row(
-        spacing: 12,
+        spacing: 8,
         children: [
           Icon(
-            isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: isSelected
+            widget.isSelected
+                ? Icons.check_circle
+                : Icons.radio_button_unchecked,
+            color: widget.isSelected
                 ? accent
                 : (isDark ? Colors.grey.shade500 : Colors.grey.shade400),
             size: 24,
           ),
 
-          Container(
-            width: 4,
-            height: 30,
-            decoration: BoxDecoration(
-              color: todo.isDone ? Colors.grey : priorityColor,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
           Expanded(
             child: _buildHighlightedText(
-              text: todo.title,
+              text: widget.todo.title,
               style: TextStyle(
-                decoration: todo.isDone
+                decoration: widget.todo.isDone
                     ? TextDecoration.lineThrough
                     : TextDecoration.none,
-                color: todo.isDone
+                color: widget.todo.isDone
                     ? (isDark ? Colors.grey.shade600 : Colors.grey.shade500)
                     : (isDark ? Colors.white : Colors.black87),
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
 
+          if (widget.todo.subtasks.isNotEmpty)
+            _buildProgressBadge(isDark, accent),
+
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: todo.isDone
+              color: widget.todo.isDone
                   ? (isDark
                         ? Colors.grey.shade600.withValues(alpha: 0.15)
                         : Colors.grey.shade500.withValues(alpha: 0.15))
                   : priorityColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Text(
-              todo.priority.name.toUpperCase(),
+              widget.todo.priority.name.toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: todo.isDone
+                color: widget.todo.isDone
                     ? (isDark ? Colors.grey.shade600 : Colors.grey.shade500)
                     : priorityColor,
               ),
@@ -171,51 +183,46 @@ class TodoItem extends StatelessWidget {
     return ExpansionTile(
       leading: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 12,
         children: [
-          Container(
-            width: 4,
-            height: 30,
-            decoration: BoxDecoration(
-              color: todo.isDone ? Colors.grey : priorityColor,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
           IconButton(
             icon: Icon(
-              todo.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: todo.isDone
+              widget.todo.isDone
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: widget.todo.isDone
                   ? Colors.green
                   : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
               size: 28,
             ),
-            onPressed: onToggle,
+            onPressed: widget.onToggle,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
         ],
       ),
       title: _buildHighlightedText(
-        text: todo.title,
+        text: widget.todo.title,
         style: TextStyle(
-          decoration: todo.isDone
+          decoration: widget.todo.isDone
               ? TextDecoration.lineThrough
               : TextDecoration.none,
-          color: todo.isDone
+          color: widget.todo.isDone
               ? (isDark ? Colors.grey.shade600 : Colors.grey.shade500)
               : (isDark ? Colors.white : Colors.black87),
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 8,
+        spacing: 4,
         children: [
+          if (widget.todo.subtasks.isNotEmpty)
+            _buildProgressBadge(isDark, Theme.of(context).colorScheme.primary),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: todo.isDone
+              color: widget.todo.isDone
                   ? (isDark
                         ? Colors.grey.shade600.withValues(alpha: 0.15)
                         : Colors.grey.shade500.withValues(alpha: 0.15))
@@ -223,11 +230,11 @@ class TodoItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              todo.priority.name.toUpperCase(),
+              widget.todo.priority.name.toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: todo.isDone
+                color: widget.todo.isDone
                     ? (isDark ? Colors.grey.shade600 : Colors.grey.shade500)
                     : priorityColor,
               ),
@@ -235,7 +242,7 @@ class TodoItem extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: onDelete,
+            onPressed: widget.onDelete,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -243,12 +250,11 @@ class TodoItem extends StatelessWidget {
       ),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 8,
             children: [
-              if (todo.description.isNotEmpty) ...[
+              if (widget.todo.description.isNotEmpty) ...[
                 Row(
                   spacing: 8,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,9 +268,9 @@ class TodoItem extends StatelessWidget {
                     ),
                     Expanded(
                       child: _buildHighlightedText(
-                        text: todo.description,
+                        text: widget.todo.description,
                         style: TextStyle(
-                          color: todo.isDone
+                          color: widget.todo.isDone
                               ? (isDark
                                     ? Colors.grey.shade500
                                     : Colors.grey.shade400)
@@ -279,6 +285,83 @@ class TodoItem extends StatelessWidget {
                   ],
                 ),
               ],
+
+              SizedBox(height: 16),
+
+              if (widget.todo.subtasks.isNotEmpty) ...[
+                Row(
+                  spacing: 8,
+                  children: [
+                    Icon(
+                      Icons.checklist,
+                      size: 16,
+                      color: isDark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
+                    ),
+                    Text(
+                      'Subtasks',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                    Text(
+                      '${widget.todo.completedSubtasks}/${widget.todo.subtasks.length}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? Colors.grey.shade500
+                            : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 4),
+
+                ...widget.todo.subtasks.map(
+                  (subtask) => SubtaskItem(
+                    subtask: subtask,
+                    isDark: isDark,
+                    onToggle: () => _toggleSubtask(subtask),
+                    onEdit: () => _editSubtask(subtask),
+                  ),
+                ),
+              ],
+
+              if (_addingSubtask)
+                _buildSubtaskInput(isDark)
+              else
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _addingSubtask = true;
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _subtaskFocusNode.requestFocus();
+                      });
+                    },
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add subtask'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+
+              SizedBox(height: 8),
+
               Row(
                 spacing: 4,
                 children: [
@@ -288,7 +371,7 @@ class TodoItem extends StatelessWidget {
                     color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
                   Text(
-                    'Updated ${todo.timeAgo}',
+                    'Updated ${widget.todo.timeAgo}',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark
@@ -305,7 +388,7 @@ class TodoItem extends StatelessWidget {
                     color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                   ),
                   Text(
-                    'Created ${todo.createdDate}',
+                    'Created ${widget.todo.createdDate}',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark
@@ -315,7 +398,7 @@ class TodoItem extends StatelessWidget {
                   ),
                   const Spacer(),
                   TextButton.icon(
-                    onPressed: onEdit,
+                    onPressed: widget.onEdit,
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Edit'),
                     style: TextButton.styleFrom(
@@ -337,7 +420,7 @@ class TodoItem extends StatelessWidget {
     required String text,
     required TextStyle style,
   }) {
-    final query = searchQuery.trim();
+    final query = widget.searchQuery.trim();
     if (query.isEmpty) return Text(text, style: style);
 
     final lowerText = text.toLowerCase();
@@ -370,5 +453,177 @@ class TodoItem extends StatelessWidget {
     }
 
     return Text.rich(TextSpan(children: spans), maxLines: null);
+  }
+
+  Widget _buildProgressBadge(bool isDark, Color accent) {
+    final done = widget.todo.completedSubtasks;
+    final total = widget.todo.subtasks.length;
+    final allDone = done == total;
+
+    final color = allDone ? Colors.green : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Row(
+        spacing: 4,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            allDone ? Icons.checklist_rtl : Icons.checklist,
+            size: 12,
+            color: color,
+          ),
+          Text(
+            '$done/$total',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubtaskInput(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        spacing: 8,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _subtaskController,
+              focusNode: _subtaskFocusNode,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'New subtask...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 8,
+                ),
+              ),
+              onSubmitted: (_) => _confirmAddSubtask(),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check, size: 18, color: Colors.green),
+            onPressed: _confirmAddSubtask,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              size: 18,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+            onPressed: () {
+              setState(() {
+                _subtaskController.clear();
+                _addingSubtask = false;
+              });
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAddSubtask() {
+    final text = _subtaskController.text.trim();
+    if (text.isEmpty) return;
+
+    final newSubtask = Subtask(title: text);
+    final updated = widget.todo.copyWith(
+      subtasks: [...widget.todo.subtasks, newSubtask],
+    );
+    widget.onUpdate(updated);
+    setState(() {
+      _subtaskController.clear();
+      _addingSubtask = false;
+    });
+  }
+
+  void _deleteSubtask(Subtask subtask, BuildContext ctx) {
+    final updatedList = widget.todo.subtasks
+        .where((s) => s.id != subtask.id)
+        .toList();
+    widget.onUpdate(widget.todo.copyWith(subtasks: updatedList));
+    Navigator.pop(ctx);
+  }
+
+  void _editSubtask(Subtask subtask) {
+    final controller = TextEditingController(text: subtask.title);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit subtask'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Subtask title...',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (_) {
+            _saveSubtaskEdit(subtask, controller.text, ctx);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => _deleteSubtask(subtask, ctx),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+          FilledButton(
+            onPressed: () => _saveSubtaskEdit(subtask, controller.text, ctx),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveSubtaskEdit(Subtask subtask, String newTitle, BuildContext ctx) {
+    final text = newTitle.trim();
+    if (text.isEmpty) return;
+
+    final index = widget.todo.subtasks.indexWhere((s) => s.id == subtask.id);
+    if (index < 0) return;
+
+    final updatedList = List<Subtask>.from(widget.todo.subtasks);
+    updatedList[index] = subtask.copyWith(title: text);
+    widget.onUpdate(widget.todo.copyWith(subtasks: updatedList));
+    Navigator.pop(ctx);
+  }
+
+  void _toggleSubtask(Subtask subtask) {
+    final index = widget.todo.subtasks.indexWhere((s) => s.id == subtask.id);
+    if (index < 0) return;
+
+    final updatedList = List<Subtask>.from(widget.todo.subtasks);
+    updatedList[index] = subtask.copyWith(isDone: !subtask.isDone);
+    widget.onUpdate(widget.todo.copyWith(subtasks: updatedList));
   }
 }

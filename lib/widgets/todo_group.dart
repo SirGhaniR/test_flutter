@@ -12,6 +12,7 @@ class TodoGroup extends StatelessWidget {
   final Function(Todo) onDelete;
   final Function(Todo) onEdit;
   final Function(Todo) onLongPress;
+  final Function(Todo) onUpdate;
   final Set<Todo> selectedTodos;
   final bool isSelectionMode;
   final Function(Todo) onSelectionToggle;
@@ -27,6 +28,7 @@ class TodoGroup extends StatelessWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onLongPress,
+    required this.onUpdate,
     required this.selectedTodos,
     required this.isSelectionMode,
     required this.onSelectionToggle,
@@ -123,6 +125,7 @@ class TodoGroup extends StatelessWidget {
               onDelete: () => onDelete(todo),
               onEdit: () => onEdit(todo),
               onLongPress: () => onLongPress(todo),
+              onUpdate: onUpdate,
               isSelectionMode: isSelectionMode,
               isSelected: selectedTodos.contains(todo),
               onSelectionToggle: () => onSelectionToggle(todo),

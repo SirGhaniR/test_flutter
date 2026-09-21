@@ -47,38 +47,7 @@ class TodoImporter {
         final title = (item['title'] as String?)?.trim() ?? "";
         if (title.isEmpty) continue;
 
-        final description = (item['description'] as String?) ?? "";
-        final isDone = item['isDone'] == true;
-        final priorityName = (item['priority'] as String?) ?? "medium";
-
-        final priority = Priority.values.firstWhere(
-          (p) => p.name == priorityName,
-          orElse: () => Priority.medium,
-        );
-
-        DateTime? createdAt;
-        DateTime? updatedAt;
-
-        try {
-          if (item["createdAt"] != null) {
-            createdAt = DateTime.parse(item["createdAt"]);
-          }
-
-          if (item["updatedAt"] != null) {
-            updatedAt = DateTime.parse(item["updatedAt"]);
-          }
-        } catch (_) {}
-
-        todos.add(
-          Todo(
-            title: title,
-            description: description,
-            isDone: isDone,
-            priority: priority,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
-        );
+        todos.add(Todo.fromJson(item));
       }
 
       if (todos.isEmpty) {
@@ -100,6 +69,7 @@ class TodoImporter {
       Priority currentPriority = Priority.medium;
       bool currentDone = false;
       final descriptionLines = <String>[];
+      final subtasks = <Subtask>[];
 
       void flush() {
         if (currentTitle != null && currentTitle!.isNotEmpty) {
@@ -109,6 +79,7 @@ class TodoImporter {
               description: descriptionLines.join("\n").trim(),
               isDone: currentDone,
               priority: currentPriority,
+              subtasks: List<Subtask>.from(subtasks),
             ),
           );
         }
@@ -117,12 +88,25 @@ class TodoImporter {
         currentPriority = Priority.medium;
         currentDone = false;
         descriptionLines.clear();
+        subtasks.clear();
       }
 
       final taskRegex = RegExp(r'^-\s*\[( |x|X)\]\s*(.+)$');
+      final subtaskRegex = RegExp(r'^\s+-\s*\[( |x|X)\]\s*(.+)$');
 
       for (final rawLine in lines) {
         final line = rawLine.trimRight();
+
+        final subtaskMatch = subtaskRegex.firstMatch(line);
+        if (subtaskMatch != null && currentTitle != null) {
+          final isDone = subtaskMatch.group(1)!.toLowerCase() == 'x';
+          final subTitle = subtaskMatch.group(2)!.trim();
+          if (subTitle.isNotEmpty) {
+            subtasks.add(Subtask(title: subTitle, isDone: isDone));
+          }
+          continue;
+        }
+
         final taskMatch = taskRegex.firstMatch(line.trim());
 
         if (taskMatch != null) {
@@ -162,7 +146,8 @@ class TodoImporter {
           error:
               "No valid tasks found. Make sure lines look like:\n"
               "- [ ] **Task Title** 🔴\n"
-              "  > description",
+              "  > description\n"
+              "  - [ ] subtask",
         );
       }
 
