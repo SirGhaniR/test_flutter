@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../dialogs/confirm_dialog.dart';
+import '../logic/todo_archiver.dart';
 import '../logic/todo_filter.dart';
 import '../logic/todo_grouping.dart';
 import '../models/todo.dart';
@@ -15,6 +16,7 @@ import '../widgets/selection_action_bar.dart';
 import '../widgets/sort_dropdown.dart';
 import '../widgets/todo_group.dart';
 import '../widgets/todo_stats.dart';
+import 'archive_screen.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -35,14 +37,17 @@ class TodoScreenState extends State<TodoScreen> {
   final Set<Todo> selectedTodos = {};
   bool isSelectionMode = false;
 
+  int get archivedCount => todos.where((t) => t.isArchived).length;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final groupedTodos = TodoGrouper.groupTodos(filteredTodos);
 
-    int doneCount = filteredTodos.where((todo) => todo.isDone).length;
-    bool allDone =
-        filteredTodos.isNotEmpty && doneCount == filteredTodos.length;
+    final activeTodos = todos.where((t) => !t.isArchived).toList();
+
+    int doneCount = activeTodos.where((todo) => todo.isDone).length;
+    bool allDone = activeTodos.isNotEmpty && doneCount == activeTodos.length;
 
     return Scaffold(
       appBar: isSelectionMode
@@ -52,8 +57,8 @@ class TodoScreenState extends State<TodoScreen> {
       floatingActionButton: isSelectionMode
           ? null
           : Container(
-            margin: EdgeInsets.only(bottom: 60),
-            child: FloatingActionButton(
+              margin: const EdgeInsets.only(bottom: 60),
+              child: FloatingActionButton(
                 onPressed: openAddSheet,
                 tooltip: 'Add task',
                 shape: RoundedRectangleBorder(
@@ -61,7 +66,7 @@ class TodoScreenState extends State<TodoScreen> {
                 ),
                 child: const Icon(Icons.add),
               ),
-          ),
+            ),
       body: Container(
         margin: const EdgeInsetsGeometry.only(top: 20),
         child: Column(
@@ -167,18 +172,53 @@ class TodoScreenState extends State<TodoScreen> {
                 selectedCount: selectedTodos.length,
                 onCopy: openExportSheet,
                 onToggleDone: bulkToggleDone,
+                onArchive: bulkArchive,
                 onDelete: bulkDelete,
                 onCancel: exitSelectionMode,
               )
             else
               TodoStats(
-                total: todos.length,
-                left: todos.where((todo) => !todo.isDone).length,
+                total: activeTodos.length,
+                left: activeTodos.where((todo) => !todo.isDone).length,
                 isDark: isDark,
               ),
           ],
         ),
       ),
+    );
+  }
+
+  void bulkArchive() {
+    if (selectedTodos.isEmpty) return;
+    HapticFeedback.mediumImpact();
+
+    final now = DateTime.now();
+    final toArchive = Set<Todo>.from(selectedTodos);
+
+    setState(() {
+      for (final todo in toArchive) {
+        final index = todos.indexWhere((t) => t.id == todo.id);
+        if (index < 0) continue;
+        todos[index] = todos[index].copyWith(archivedAt: now);
+      }
+    });
+    _saveTodos();
+    _filterAndSortTodos();
+    exitSelectionMode();
+
+    _showUndoSnack(
+      '${toArchive.length} task${toArchive.length > 1 ? 's' : ''} archived',
+      () {
+        setState(() {
+          for (final todo in toArchive) {
+            final index = todos.indexWhere((t) => t.id == todo.id);
+            if (index < 0) continue;
+            todos[index] = todos[index].copyWith(clearArchivedAt: true);
+          }
+        });
+        _saveTodos();
+        _filterAndSortTodos();
+      },
     );
   }
 
@@ -239,7 +279,7 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   Future<void> clearCompleted() async {
-    final completed = todos.where((t) => t.isDone).toList();
+    final completed = todos.where((t) => t.isDone && !t.isArchived).toList();
     if (completed.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -265,7 +305,7 @@ class TodoScreenState extends State<TodoScreen> {
     final backup = List<Todo>.from(completed);
 
     setState(() {
-      todos.removeWhere((todo) => todo.isDone);
+      todos.removeWhere((todo) => todo.isDone && !todo.isArchived);
     });
     _saveTodos();
     _filterAndSortTodos();
@@ -395,6 +435,25 @@ class TodoScreenState extends State<TodoScreen> {
     });
   }
 
+  void openArchiveScreen() {
+    HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ArchiveScreen(
+          todos: todos,
+          onSave: (updated) {
+            setState(() {
+              todos = updated;
+            });
+            _saveTodos();
+            _filterAndSortTodos();
+          },
+        ),
+      ),
+    );
+  }
+
   void openExportSheet() {
     if (selectedTodos.isEmpty) return;
     HapticFeedback.selectionClick();
@@ -412,6 +471,7 @@ class TodoScreenState extends State<TodoScreen> {
 
   void openImportSheet() {
     HapticFeedback.selectionClick();
+    final active = todos.where((t) => !t.isArchived).toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -422,7 +482,7 @@ class TodoScreenState extends State<TodoScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
       builder: (_) => ImportBottomSheet(
-        existingTitles: todos.map((t) => t.title).toSet(),
+        existingTitles: active.map((t) => t.title).toSet(),
         onImport: (importedTodos) {
           HapticFeedback.mediumImpact();
           final backup = List<Todo>.from(importedTodos);
@@ -474,10 +534,13 @@ class TodoScreenState extends State<TodoScreen> {
 
   void toggleSelectAll() {
     HapticFeedback.selectionClick();
+    final active = todos.where((t) => !t.isArchived).toList();
     setState(() {
-      bool allDone = todos.every((todo) => todo.isDone);
-      for (var todo in todos) {
-        todo.isDone = !allDone;
+      bool allDone = active.every((todo) => todo.isDone);
+      for (var todo in active) {
+        final index = todos.indexWhere((t) => t.id == todo.id);
+        if (index == -1) continue;
+        todos[index] = todos[index].copyWith(isDone: !allDone);
       }
     });
     _saveTodos();
@@ -502,6 +565,15 @@ class TodoScreenState extends State<TodoScreen> {
     return AppBar(
       title: const Text('Do Deez'),
       actions: [
+        IconButton(
+          icon: Badge(
+            isLabelVisible: archivedCount > 0,
+            label: Text('$archivedCount'),
+            child: const Icon(Icons.archive_outlined),
+          ),
+          onPressed: openArchiveScreen,
+          tooltip: 'Archive',
+        ),
         IconButton(
           icon: const Icon(Icons.download),
           onPressed: openImportSheet,
@@ -555,9 +627,17 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   void _loadTodos() async {
-    final loadedTodos = await TodoStorage.loadTodos();
+    final loaded = await TodoStorage.loadTodos();
+    final auto = TodoArchiver.autoArchive(loaded);
+
+    if (auto.any((t) => t.isArchived) && !loaded.any((t) => t.isArchived)) {
+      await TodoStorage.saveTodos(auto);
+    } else if (!_todosEqual(auto, loaded)) {
+      await TodoStorage.saveTodos(auto);
+    }
+
     setState(() {
-      todos = loadedTodos;
+      todos = auto;
       _filterAndSortTodos();
     });
   }
@@ -610,5 +690,13 @@ class TodoScreenState extends State<TodoScreen> {
     final complete = sorted.where((t) => t.isDone).toList();
 
     return [...incomplete, ...complete];
+  }
+
+  bool _todosEqual(List<Todo> a, List<Todo> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].archivedAt != b[i].archivedAt) return false;
+    }
+    return true;
   }
 }

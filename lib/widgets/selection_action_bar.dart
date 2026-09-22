@@ -4,6 +4,7 @@ class SelectionActionBar extends StatelessWidget {
   final int selectedCount;
   final VoidCallback onCopy;
   final VoidCallback onToggleDone;
+  final VoidCallback onArchive;
   final VoidCallback onDelete;
   final VoidCallback onCancel;
 
@@ -12,6 +13,7 @@ class SelectionActionBar extends StatelessWidget {
     required this.selectedCount,
     required this.onCopy,
     required this.onToggleDone,
+    required this.onArchive,
     required this.onDelete,
     required this.onCancel,
   });
@@ -60,6 +62,13 @@ class SelectionActionBar extends StatelessWidget {
                 icon: Icons.check_circle_outline,
                 label: 'Done',
                 onPressed: onToggleDone,
+                isDark: isDark,
+              ),
+
+              _ActionButton(
+                icon: Icons.archive_outlined,
+                label: 'Archive',
+                onPressed: onArchive,
                 isDark: isDark,
               ),
 

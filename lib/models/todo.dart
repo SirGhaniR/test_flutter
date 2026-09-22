@@ -42,6 +42,7 @@ class Todo {
   final DateTime createdAt;
   DateTime updatedAt;
   List<Subtask> subtasks;
+  DateTime? archivedAt;
 
   Todo({
     String? id,
@@ -52,6 +53,7 @@ class Todo {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<Subtask>? subtasks,
+    this.archivedAt,
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toString(),
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now(),
@@ -79,7 +81,15 @@ class Todo {
               .map((s) => Subtask.fromJson(s))
               .toList() ??
           [],
+      archivedAt: json['archivedAt'] != null
+          ? DateTime.tryParse(json['archivedAt'])
+          : null,
     );
+  }
+
+  String get archivedDate {
+    if (archivedAt == null) return '';
+    return '${archivedAt!.day}/${archivedAt!.month}/${archivedAt!.year}';
   }
 
   int get completedSubtasks => subtasks.where((s) => s.isDone).length;
@@ -87,6 +97,8 @@ class Todo {
   String get createdDate {
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   }
+
+  bool get isArchived => archivedAt != null;
 
   double get progress {
     if (subtasks.isEmpty) return 0;
@@ -116,6 +128,8 @@ class Todo {
     Priority? priority,
     DateTime? updatedAt,
     List<Subtask>? subtasks,
+    DateTime? archivedAt,
+    bool clearArchivedAt = false,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -126,6 +140,7 @@ class Todo {
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       subtasks: subtasks ?? this.subtasks,
+      archivedAt: clearArchivedAt ? null : (archivedAt ?? this.archivedAt),
     );
   }
 
@@ -139,6 +154,7 @@ class Todo {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'subtasks': subtasks.map((s) => s.toJson()).toList(),
+      'archivedAt': archivedAt?.toIso8601String(),
     };
   }
 
