@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/todo.dart';
+import 'priority_selector.dart';
 import 'subtask_draft_input.dart';
 
 class EditTodoBottomSheet extends StatefulWidget {
@@ -85,13 +86,13 @@ class _EditTodoBottomSheetState extends State<EditTodoBottomSheet> {
                   minLines: 2,
                 ),
 
-                Row(
-                  spacing: 8,
-                  children: [
-                    _buildPriorityButton(Priority.low),
-                    _buildPriorityButton(Priority.medium),
-                    _buildPriorityButton(Priority.high),
-                  ],
+                PrioritySelector(
+                  selected: _priority,
+                  onChanged: (p) {
+                    setState(() {
+                      _priority = p;
+                    });
+                  },
                 ),
 
                 SubtaskDraftInput(
@@ -160,71 +161,6 @@ class _EditTodoBottomSheetState extends State<EditTodoBottomSheet> {
     );
     _priority = widget.todo.priority;
     _subtasks = List<Subtask>.from(widget.todo.subtasks);
-  }
-
-  Widget _buildPriorityButton(Priority priority) {
-    final isSelected = _priority == priority;
-    final color = Todo.getPriorityColor(priority);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    String label;
-    switch (priority) {
-      case Priority.low:
-        label = 'Low';
-        break;
-      case Priority.medium:
-        label = 'Medium';
-        break;
-      case Priority.high:
-        label = 'High';
-        break;
-    }
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _priority = priority;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? color.withValues(alpha: 0.2)
-                : Colors.transparent,
-            border: Border.all(
-              color: isSelected
-                  ? color
-                  : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-              width: isSelected ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 6,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isSelected
-                      ? color
-                      : (isDark ? Colors.grey.shade400 : Colors.grey),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   void _submit() {
