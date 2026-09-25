@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../logic/todo_importer.dart';
 import '../models/todo.dart';
+import 'bottom_sheet_shell.dart';
 
 class ImportBottomSheet extends StatefulWidget {
   final void Function(List<Todo> todos) onImport;
@@ -50,174 +51,110 @@ class _ImportBottomSheetState extends State<ImportBottomSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.primary;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              spacing: 12,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
+    return BottomSheetShell(
+      icon: Icons.download,
+      title: 'Import Tasks',
+      subtitle: 'Paste JSON or Markdown below',
+      child: Column(
+        spacing: 12,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _pasteFromClipboard,
+            icon: const Icon(Icons.content_paste, size: 18),
+            label: const Text("Paste From Clipboard"),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
 
-                Row(
-                  spacing: 8,
-                  children: [
-                    Icon(Icons.download, color: accent),
-                    Expanded(
-                      child: Column(
-                        spacing: 2,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Import Tasks",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            "Paste JSON or Markdown below",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+          Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: TextField(
+              controller: _controller,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: '[\n  {\n    "title": "Buy groceries",\n    "description": "Milk, eggs",\n    "priority": "high"\n  }\n]',
+                hintStyle: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(12),
+              ),
+              onChanged: (_) {
+                if (_showingPreview) {
+                  setState(() {
+                    _preview = null;
+                    _showingPreview = false;
+                  });
+                }
+              },
+            ),
+          ),
 
-                OutlinedButton.icon(
-                  onPressed: _pasteFromClipboard,
-                  icon: const Icon(Icons.content_paste, size: 18),
-                  label: const Text("Paste From Clipboard"),
+          if (_showingPreview && _preview != null) _buildPreview(isDark),
+
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
+                  child: const Text('Cancel'),
                 ),
-
-                Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.grey.shade700
-                          : Colors.grey.shade300,
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    maxLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: '[\n  {\n    "title": "Buy groceries",\n    "description": "Milk, eggs",\n    "priority": "high"\n  }\n]',
-                      hintStyle: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(12),
-                    ),
-                    onChanged: (_) {
-                      if (_showingPreview) {
-                        setState(() {
-                          _preview = null;
-                          _showingPreview = false;
-                        });
-                      }
-                    },
-                  ),
-                ),
-
-                if (_showingPreview && _preview != null) _buildPreview(isDark),
-
-                Row(
-                  spacing: 12,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
+              ),
+              Expanded(
+                flex: 2,
+                child:
+                    _showingPreview &&
+                        _preview?.isSuccess == true &&
+                        _toImport.isNotEmpty
+                    ? FilledButton.icon(
+                        onPressed: _confirmImport,
+                        icon: const Icon(Icons.check, size: 18),
+                        label: Text('Import ${_toImport.length}'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accent,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                        child: const Text('Cancel'),
+                      )
+                    : FilledButton.icon(
+                        onPressed: _controller.text.trim().isEmpty
+                            ? null
+                            : _previewImport,
+                        icon: const Icon(Icons.preview, size: 18),
+                        label: const Text('Preview'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accent,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child:
-                          _showingPreview &&
-                              _preview?.isSuccess == true &&
-                              _toImport.isNotEmpty
-                          ? FilledButton.icon(
-                              onPressed: _confirmImport,
-                              icon: const Icon(Icons.check, size: 18),
-                              label: Text('Import ${_toImport.length}'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            )
-                          : FilledButton.icon(
-                              onPressed: _controller.text.trim().isEmpty
-                                  ? null
-                                  : _previewImport,
-                              icon: const Icon(Icons.preview, size: 18),
-                              label: const Text('Preview'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }

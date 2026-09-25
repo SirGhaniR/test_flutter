@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/todo.dart';
+import 'bottom_sheet_shell.dart';
 import 'priority_selector.dart';
 import 'subtask_draft_input.dart';
 
@@ -22,124 +23,88 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Theme.of(context).colorScheme.primary;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              spacing: 12,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.grey.shade600
-                          : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-
-                Row(
-                  spacing: 8,
-                  children: [
-                    Icon(Icons.add_task, color: accent),
-                    Text(
-                      'New Task',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-
-                TextField(
-                  controller: _titleController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Task title...',
-                    border: OutlineInputBorder(),
-                    labelText: 'Title',
-                  ),
-                  onSubmitted: (_) => _submit(),
-                ),
-
-                TextField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    hintText: 'Description (optional)...',
-                    border: OutlineInputBorder(),
-                    labelText: 'Description',
-                  ),
-                  maxLines: 3,
-                  minLines: 2,
-                ),
-
-                PrioritySelector(
-                  selected: _priority,
-                  onChanged: (p) {
-                    setState(() {
-                      _priority = p;
-                    });
-                  },
-                ),
-
-                SubtaskDraftInput(
-                  subtasks: _subtasks,
-                  isDark: isDark,
-                  onChanged: (updated) {
-                    setState(() {
-                      _subtasks = updated;
-                    });
-                  },
-                ),
-
-                Row(
-                  spacing: 12,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Add Task'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: accent,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+    return BottomSheetShell(
+      icon: Icons.add_task,
+      title: 'New Task',
+      child: Column(
+        spacing: 12,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _titleController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Task title...',
+              border: OutlineInputBorder(),
+              labelText: 'Title',
             ),
+            onSubmitted: (_) => _submit(),
           ),
-        ),
+
+          TextField(
+            controller: _descriptionController,
+            decoration: const InputDecoration(
+              hintText: 'Description (optional)...',
+              border: OutlineInputBorder(),
+              labelText: 'Description',
+            ),
+            maxLines: 3,
+            minLines: 2,
+          ),
+
+          PrioritySelector(
+            selected: _priority,
+            onChanged: (p) {
+              setState(() {
+                _priority = p;
+              });
+            },
+          ),
+
+          SubtaskDraftInput(
+            subtasks: _subtasks,
+            isDark: isDark,
+            onChanged: (updated) {
+              setState(() {
+                _subtasks = updated;
+              });
+            },
+          ),
+
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Add Task'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
