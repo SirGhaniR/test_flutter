@@ -15,7 +15,10 @@ class TodoFilter {
       final descriptionMatch = todo.description.toLowerCase().contains(
         lowerQuery,
       );
-      return titleMatch || descriptionMatch;
+      final subtaskMatch = todo.subtasks.any(
+        (s) => s.title.toLowerCase().contains(lowerQuery),
+      );
+      return titleMatch || descriptionMatch || subtaskMatch;
     }).toList();
   }
 
