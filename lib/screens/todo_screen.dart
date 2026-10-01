@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -565,6 +566,12 @@ class TodoScreenState extends State<TodoScreen> {
     return AppBar(
       title: const Text('Do Deez'),
       actions: [
+        if (kDebugMode)
+          IconButton(
+            icon: const Icon(Icons.science_outlined),
+            onPressed: _seedSampleData,
+            tooltip: 'Seed sample data (debug)',
+          ),
         IconButton(
           icon: Badge(
             isLabelVisible: archivedCount > 0,
@@ -649,6 +656,114 @@ class TodoScreenState extends State<TodoScreen> {
 
   void _saveTodos() {
     TodoStorage.saveTodos(todos);
+  }
+
+  void _seedSampleData() {
+    HapticFeedback.mediumImpact();
+    final now = DateTime.now();
+
+    final samples = <Todo>[
+      Todo(
+        title: 'Buy groceries',
+        description: 'Milk, eggs, bread, and something green',
+        priority: Priority.high,
+        createdAt: now,
+        updatedAt: now,
+        subtasks: [
+          Subtask(title: 'Milk'),
+          Subtask(title: 'Eggs'),
+          Subtask(title: 'Bread', isDone: true),
+        ],
+      ),
+      Todo(
+        title: 'Call mom',
+        description: '',
+        priority: Priority.low,
+        createdAt: now,
+        updatedAt: now,
+      ),
+      Todo(
+        title: 'Finish Flutter project',
+        description: 'Refactor the todo item widget and add tests',
+        priority: Priority.medium,
+        createdAt: now,
+        updatedAt: now,
+        subtasks: [
+          Subtask(title: 'Refactor TodoItem'),
+          Subtask(title: 'Add importer tests'),
+          Subtask(title: 'Clean up dead code'),
+        ],
+      ),
+      Todo(
+        title: 'Read a book',
+        description: '',
+        priority: Priority.low,
+        isDone: true,
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+      ),
+      Todo(
+        title: 'Pay electricity bill',
+        description: 'Before the 25th',
+        priority: Priority.high,
+        createdAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+      ),
+      Todo(
+        title: 'Water the plants',
+        description: '',
+        priority: Priority.low,
+        isDone: true,
+        createdAt: now.subtract(const Duration(days: 3)),
+        updatedAt: now.subtract(const Duration(days: 3)),
+      ),
+      Todo(
+        title: 'Fix the sink',
+        description: 'Leaking again',
+        priority: Priority.medium,
+        createdAt: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(days: 5)),
+      ),
+      Todo(
+        title: 'Old project cleanup',
+        description: '',
+        priority: Priority.low,
+        isDone: true,
+        createdAt: now.subtract(const Duration(days: 30)),
+        updatedAt: now.subtract(const Duration(days: 30)),
+        archivedAt: now.subtract(const Duration(days: 20)),
+      ),
+      Todo(
+        title: 'Read release notes',
+        description: 'Flutter 3.35 changelog',
+        priority: Priority.medium,
+        isDone: true,
+        createdAt: now.subtract(const Duration(days: 25)),
+        updatedAt: now.subtract(const Duration(days: 25)),
+        archivedAt: now.subtract(const Duration(days: 15)),
+      ),
+      Todo(
+        title: 'Try the new coffee shop',
+        description: 'Two blocks over, opens at 7am',
+        priority: Priority.low,
+        createdAt: now.subtract(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(days: 2)),
+      ),
+    ];
+
+    setState(() {
+      todos = samples;
+    });
+    _saveTodos();
+    _filterAndSortTodos();
+
+    _showUndoSnack('Seeded 10 sample tasks', () {
+      setState(() {
+        todos = [];
+      });
+      _saveTodos();
+      _filterAndSortTodos();
+    });
   }
 
   void _showUndoSnack(String message, VoidCallback onUndo) {
